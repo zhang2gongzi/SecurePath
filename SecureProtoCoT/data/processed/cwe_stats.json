@@ -1,0 +1,38 @@
+{
+  "sampling": {
+    "CWE-119": {
+      "available": 17570,
+      "sampled": 1000
+    },
+    "CWE-416": {
+      "available": 6124,
+      "sampled": 1000
+    },
+    "CWE-125": {
+      "available": 5646,
+      "sampled": 1000
+    },
+    "CWE-476": {
+      "available": 3519,
+      "sampled": 1000
+    },
+    "CWE-190": {
+      "available": 2649,
+      "sampled": 1000
+    },
+    "CWE-787": {
+      "available": 1942,
+      "sampled": 1000
+    }
+  },
+  "strategy_one": {
+    "train": 4200,
+    "val": 600,
+    "test": 1200
+  },
+  "strategy_two": {
+    "train": 5000,
+    "test": 1000,
+    "left_out_cwe": "CWE-787"
+  }
+}
