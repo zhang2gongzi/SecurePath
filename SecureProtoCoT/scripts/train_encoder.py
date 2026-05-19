@@ -11,7 +11,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from transformers import AutoModel, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
+from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
+from torch.optim import AdamW
 from tqdm import tqdm
 import pandas as pd
 import numpy as np

@@ -42,11 +42,26 @@ env/
 *.model
 outputs/models/
 
-# Data files (too large)
+# Data files
 database/
-*.csv
-*.json
-!cwe_stats.json
+
+# 大数据文件（超过100MB，GitHub限制）
+SecureProtoCoT/data/processed/train_ratio.csv
+SecureProtoCoT/data/processed/train_leave_one.csv
+SecureProtoCoT/data/processed/test_ratio.csv
+SecureProtoCoT/data/processed/test_leave_one.csv
+SecureProtoCoT/data/processed/val_ratio.csv
+SecureProtoCoT/data/processed/train_contrastive.csv
+
+# 保留统计数据（小文件）
+# cwe_stats.json 可以上传
+
+# Large model files
+*.bin
+*.pt
+*.pth
+*.model
+outputs/models/
 
 # Logs
 *.log
