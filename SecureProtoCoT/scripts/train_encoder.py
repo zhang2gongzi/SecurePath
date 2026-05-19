@@ -21,15 +21,16 @@ from pathlib import Path
 # 配置
 CONFIG = {
     # 模型
-    'model_name': r'E:\paper\new\model\codebert-base',  # 本地模型路径
+    'model_name': r'/root/autodl-tmp/codebert-base',  # 本地模型路径
     'max_length': 512,
     'hidden_size': 768,
     'projection_dim': 256,
 
     # 训练
     'batch_size': 8,
+    'gradient_accumulation_steps': 4,
     'learning_rate': 2e-5,
-    'num_epochs': 5,
+    'num_epochs': 10,
     'warmup_ratio': 0.1,
     'weight_decay': 0.01,
 
@@ -37,8 +38,8 @@ CONFIG = {
     'temperature': 0.07,
 
     # 路径
-    'data_dir': r'E:\paper\new\SecureProtoCoT\data\processed',
-    'output_dir': r'E:\paper\new\SecureProtoCoT\outputs\models',
+    'data_dir': r'/root/autodl-tmp/SecurePath/SecureProtoCoT/data/processed',
+    'output_dir': r'/root/autodl-tmp/outputs/models',
 
     # 其他
     'random_seed': 42,
@@ -74,9 +75,8 @@ class ContrastiveEncoder(nn.Module):
 
         return projection
 
-
 class ContrastiveLoss(nn.Module):
-    """对比学习损失函数"""
+    """对比学习损失函数：同类聚集，异类分离"""
 
     def __init__(self, temperature=0.07):
         super().__init__()
@@ -84,39 +84,50 @@ class ContrastiveLoss(nn.Module):
 
     def forward(self, vul_embeds, fix_embeds):
         """
-        Args:
-            vul_embeds: 漏洞代码嵌入 [batch_size, projection_dim]
-            fix_embeds: 修复代码嵌入 [batch_size, projection_dim]
+        修复版：同类聚集，异类分离
+        - vul[*] 之间应该相似（正样本）
+        - fix[*] 之间应该相似（正样本）  
+        - vul[*] 与 fix[*] 应该不相似（负样本）
         """
         batch_size = vul_embeds.size(0)
+        device = vul_embeds.device
+        
+        # 🔍 调试打印（保留监控）
+        with torch.no_grad():
+            sim_matrix = torch.mm(vul_embeds, fix_embeds.t()) / self.temperature
+            diag_sim = torch.diag(sim_matrix).mean().item()
+            if batch_size > 1:
+                offdiag_sum = sim_matrix.sum() - torch.diag(sim_matrix).sum()
+                offdiag_sim = offdiag_sum / (batch_size**2 - batch_size)
+            else:
+                offdiag_sim = 0.0
+            print(f"[DEBUG] diag={diag_sim:.4f}, offdiag={offdiag_sim:.4f}, diff={diag_sim-offdiag_sim:.4f}")
 
-        # 计算相似度矩阵
-        similarity = torch.mm(vul_embeds, fix_embeds.t()) / self.temperature
-
-        # 对角线是正样本对（同一函数的漏洞版本和修复版本）
-        # 我们希望：漏洞代码远离修复代码
-        # 所以正样本是同类漏洞，负样本是修复代码
-
-        # 漏洞代码应该与其他漏洞代码相似
-        vul_sim = torch.mm(vul_embeds, vul_embeds.t()) / self.temperature
-
-        # 修复代码应该与其他修复代码相似
-        fix_sim = torch.mm(fix_embeds, fix_embeds.t()) / self.temperature
-
-        # 损失：同类聚集，异类分离
-        # 简化版：使用infoNCE
-        labels = torch.arange(batch_size).to(vul_embeds.device)
-
-        # 漏洞代码的损失：与其他漏洞相似，与修复代码不相似
-        vul_loss = F.cross_entropy(similarity, labels)
-
-        # 修复代码的损失：与其他修复相似，与漏洞代码不相似
-        fix_loss = F.cross_entropy(similarity.t(), labels)
-
-        loss = (vul_loss + fix_loss) / 2
-
+        # ✅ 核心修复：拼接所有嵌入，计算同类/异类相似度
+        all_embeds = torch.cat([vul_embeds, fix_embeds], dim=0)  # [2B, D]
+        
+        # 计算全局相似度矩阵 [2B, 2B]
+        similarity = torch.mm(all_embeds, all_embeds.t()) / self.temperature
+        
+        # 构造类别标签：前 B 个是 vul(0)，后 B 个是 fix(1)
+        class_ids = torch.cat([
+            torch.zeros(batch_size, device=device),
+            torch.ones(batch_size, device=device)
+        ])
+        
+        # 创建 mask：同类为 1，异类为 0，排除自身
+        mask = (class_ids.unsqueeze(0) == class_ids.unsqueeze(1)).float()
+        mask.fill_diagonal_(0.0)  # 排除自身对比
+        
+        # InfoNCE Loss: 最大化与同类样本的相似度（数值稳定版）
+        sim_max = torch.max(similarity, dim=1, keepdim=True).values
+        exp_sim = torch.exp(similarity - sim_max)
+        
+        pos_sum = (exp_sim * mask).sum(dim=1) + 1e-8  # 分子：同类相似度之和
+        all_sum = exp_sim.sum(dim=1) + 1e-8            # 分母：所有相似度之和
+        
+        loss = -torch.log(pos_sum / all_sum).mean()
         return loss
-
 
 def load_data(data_dir, tokenizer, max_length, batch_size):
     """加载数据"""
