@@ -21,7 +21,7 @@ from pathlib import Path
 # 配置
 CONFIG = {
     # 模型
-    'model_name': 'microsoft/codebert-base',
+    'model_name': r'E:\paper\new\model\codebert-base',  # 本地模型路径
     'max_length': 512,
     'hidden_size': 768,
     'projection_dim': 256,
