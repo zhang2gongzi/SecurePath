@@ -22,6 +22,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 # 配置
 CONFIG = {
@@ -207,12 +208,14 @@ def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
 
 
 def evaluate(model, data_dir, tokenizer, device, max_length=512):
-    """评估模型：计算漏洞检测准确率"""
+    """评估模型：计算漏洞检测准确率、F1、精确率、召回率"""
     model.eval()
 
     # 加载测试数据
     test_df = pd.read_csv(os.path.join(data_dir, 'test_contrastive.csv'))
     print(f"\n测试数据: {len(test_df)} 条")
+    print(f"  漏洞样本: {len(test_df[test_df['label'] == 1])}")
+    print(f"  安全样本: {len(test_df[test_df['label'] == 0])}")
 
     # 加载训练数据构建原型
     train_df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
@@ -251,8 +254,8 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
 
     # 测试
     print("评估测试集...")
-    correct = 0
-    total = 0
+    preds = []
+    trues = []
 
     with torch.no_grad():
         for idx, row in test_df.iterrows():
@@ -271,17 +274,28 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
             # 预测：离哪个原型更近
             pred_label = 1 if vul_dist < safe_dist else 0
 
-            if pred_label == true_label:
-                correct += 1
-            total += 1
+            preds.append(pred_label)
+            trues.append(true_label)
 
-            if total % 100 == 0:
-                print(f"已处理 {total} 条, 当前准确率: {correct/total:.4f}")
+            if len(preds) % 100 == 0:
+                print(f"已处理 {len(preds)} 条")
 
-    accuracy = correct / total
-    print(f"\n测试准确率: {accuracy:.4f}")
+    # 计算指标
+    preds = np.array(preds)
+    trues = np.array(trues)
 
-    return accuracy
+    accuracy = (preds == trues).mean()
+    f1 = f1_score(trues, preds)
+    precision = precision_score(trues, preds)
+    recall = recall_score(trues, preds)
+
+    print(f"\n=== 评估结果 ===")
+    print(f"Accuracy:  {accuracy:.4f}")
+    print(f"F1 Score:  {f1:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+
+    return accuracy, f1
 
 
 def main():
@@ -337,6 +351,7 @@ def main():
 
     # 训练
     print(f"\n开始训练，共 {CONFIG['num_epochs']} 个epoch")
+    best_f1 = 0
     best_accuracy = 0
 
     for epoch in range(CONFIG['num_epochs']):
@@ -348,18 +363,21 @@ def main():
         print(f"平均损失: {avg_loss:.4f}")
 
         # 评估
-        accuracy = evaluate(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], CONFIG['max_length'])
+        accuracy, f1 = evaluate(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], CONFIG['max_length'])
 
-        # 保存最佳模型
-        if accuracy > best_accuracy:
+        # 保存最佳模型（基于 F1）
+        if f1 > best_f1:
+            best_f1 = f1
             best_accuracy = accuracy
             model_path = output_dir / 'best_model'
             model.encoder.save_pretrained(model_path)
             tokenizer.save_pretrained(model_path)
-            print(f"保存最佳模型到: {model_path}")
+            print(f"保存最佳模型到: {model_path} (F1={f1:.4f})")
 
     print("\n" + "=" * 60)
-    print(f"训练完成! 最佳准确率: {best_accuracy:.4f}")
+    print(f"训练完成!")
+    print(f"最佳准确率: {best_accuracy:.4f}")
+    print(f"最佳 F1:    {best_f1:.4f}")
     print("=" * 60)
 
 
