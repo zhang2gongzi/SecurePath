@@ -62,6 +62,7 @@ SecureProtoCoT/data/processed/train_contrastive.csv
 *.pth
 *.model
 outputs/models/
+model/
 
 # Logs
 *.log
