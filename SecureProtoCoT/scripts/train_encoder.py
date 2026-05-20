@@ -1,6 +1,11 @@
 """
-编码器训练脚本
+编码器训练脚本 - 方案二
 使用对比学习训练CodeBERT，区分漏洞代码和安全代码
+
+数据格式适配：
+- 每行有 code 和 label 字段
+- label=1 表示漏洞代码，label=0 表示安全代码
+- 漏洞和安全代码来自不同函数（无配对关系）
 """
 
 import os
@@ -10,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
 from torch.optim import AdamW
 from tqdm import tqdm
@@ -21,13 +26,13 @@ from pathlib import Path
 # 配置
 CONFIG = {
     # 模型
-    'model_name': r'E:\paper\new\model\codebert-base',  # 本地模型路径
+'model_name': r'E:\paper\new\model\codebert-base',
     'max_length': 512,
     'hidden_size': 768,
     'projection_dim': 256,
 
     # 训练
-    'batch_size': 8,
+'batch_size': 16,
     'learning_rate': 2e-5,
     'num_epochs': 5,
     'warmup_ratio': 0.1,
@@ -64,10 +69,10 @@ class ContrastiveEncoder(nn.Module):
     def forward(self, input_ids, attention_mask):
         # 获取[CLS]表示
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = outputs.last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+        cls_embedding = outputs.last_hidden_state[:, 0, :]
 
         # 投影
-        projection = self.projection(cls_embedding)  # [batch_size, projection_dim]
+        projection = self.projection(cls_embedding)
 
         # L2归一化
         projection = F.normalize(projection, p=2, dim=1)
@@ -76,100 +81,97 @@ class ContrastiveEncoder(nn.Module):
 
 
 class ContrastiveLoss(nn.Module):
-    """对比学习损失函数"""
+"""
+    对比学习损失函数：同类聚集，异类分离
+
+    输入：一个batch的嵌入和标签
+    - 同label的样本应该相似
+    - 不同label的样本应该不相似
+    """
 
     def __init__(self, temperature=0.07):
         super().__init__()
         self.temperature = temperature
 
-    def forward(self, vul_embeds, fix_embeds):
+    def forward(self, embeddings, labels):
         """
         Args:
-            vul_embeds: 漏洞代码嵌入 [batch_size, projection_dim]
-            fix_embeds: 修复代码嵌入 [batch_size, projection_dim]
+        embeddings: [batch_size, projection_dim]
+            labels: [batch_size], 1=漏洞, 0=安全
         """
-        batch_size = vul_embeds.size(0)
+        batch_size = embeddings.size(0)
+        device = embeddings.device
 
         # 计算相似度矩阵
-        similarity = torch.mm(vul_embeds, fix_embeds.t()) / self.temperature
+        similarity = torch.mm(embeddings, embeddings.t()) / self.temperature
 
-        # 对角线是正样本对（同一函数的漏洞版本和修复版本）
-        # 我们希望：漏洞代码远离修复代码
-        # 所以正样本是同类漏洞，负样本是修复代码
+        # 创建标签mask：同label为正样本对
+        labels = labels.view(-1, 1)
+        mask = (labels == labels.t()).float()
 
-        # 漏洞代码应该与其他漏洞代码相似
-        vul_sim = torch.mm(vul_embeds, vul_embeds.t()) / self.temperature
+        # 排除自身
+        mask.fill_diagonal_(0.0)
 
-        # 修复代码应该与其他修复代码相似
-        fix_sim = torch.mm(fix_embeds, fix_embeds.t()) / self.temperature
+        # 数值稳定的 InfoNCE Loss
+        sim_max = torch.max(similarity, dim=1, keepdim=True).values
+        exp_sim = torch.exp(similarity - sim_max)
 
-        # 损失：同类聚集，异类分离
-        # 简化版：使用infoNCE
-        labels = torch.arange(batch_size).to(vul_embeds.device)
+        # 分子：同类相似度之和
+        pos_sum = (exp_sim * mask).sum(dim=1) + 1e-8
+        # 分母：所有相似度之和（排除自身）
+        all_sum = exp_sim.sum(dim=1) - torch.diag(exp_sim) + 1e-8
 
-        # 漏洞代码的损失：与其他漏洞相似，与修复代码不相似
-        vul_loss = F.cross_entropy(similarity, labels)
-
-        # 修复代码的损失：与其他修复相似，与漏洞代码不相似
-        fix_loss = F.cross_entropy(similarity.t(), labels)
-
-        loss = (vul_loss + fix_loss) / 2
+        loss = -torch.log(pos_sum / all_sum).mean()
 
         return loss
+
+
+class CodeDataset(Dataset):
+    """代码数据集"""
+
+    def __init__(self, df, tokenizer, max_length):
+        self.codes = df['code'].astype(str).tolist()
+        self.labels = df['label'].astype(int).tolist()
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.codes)
+
+    def __getitem__(self, idx):
+        encoding = self.tokenizer(
+            self.codes[idx],
+            max_length=self.max_length,
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
+        )
+        return {
+            'input_ids': encoding['input_ids'].squeeze(0),
+            'attention_mask': encoding['attention_mask'].squeeze(0),
+            'label': torch.tensor(self.labels[idx])
+        }
+
 
 
 def load_data(data_dir, tokenizer, max_length, batch_size):
     """加载数据"""
     print("加载数据...")
 
-    # 加载对比学习数据
+    # 加载训练数据
     df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
     print(f"训练数据: {len(df)} 条")
+    print(f"  漏洞样本: {len(df[df['label'] == 1])}")
+    print(f"  安全样本: {len(df[df['label'] == 0])}")
 
-    # 配对数据
-    paired_data = []
-    for i in range(0, len(df), 2):
-        if i + 1 < len(df):
-            paired_data.append({
-                'vulnerable': str(df.iloc[i]['code']),
-                'fixed': str(df.iloc[i + 1]['code']),
-            })
-
-    print(f"配对样本: {len(paired_data)} 对")
-
-    # 创建DataLoader
-    def collate_fn(batch):
-        vul_codes = [item['vulnerable'] for item in batch]
-        fix_codes = [item['fixed'] for item in batch]
-
-        vul_encodings = tokenizer(
-            vul_codes,
-            max_length=max_length,
-            padding=True,
-            truncation=True,
-            return_tensors='pt'
-        )
-
-        fix_encodings = tokenizer(
-            fix_codes,
-            max_length=max_length,
-            padding=True,
-            truncation=True,
-            return_tensors='pt'
-        )
-
-        return {
-            'vul_input_ids': vul_encodings['input_ids'],
-            'vul_attention_mask': vul_encodings['attention_mask'],
-            'fix_input_ids': fix_encodings['input_ids'],
-            'fix_attention_mask': fix_encodings['attention_mask'],
-        }
+    # 创建数据集
+    dataset = CodeDataset(df, tokenizer, max_length)
 
     dataloader = DataLoader(
-        paired_data,
+        dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=collate_fn
+        num_workers=0
     )
 
     return dataloader
@@ -183,18 +185,15 @@ def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
     progress_bar = tqdm(dataloader, desc="Training")
 
     for batch in progress_bar:
-        # 移动到设备
-        vul_input_ids = batch['vul_input_ids'].to(device)
-        vul_attention_mask = batch['vul_attention_mask'].to(device)
-        fix_input_ids = batch['fix_input_ids'].to(device)
-        fix_attention_mask = batch['fix_attention_mask'].to(device)
+        input_ids = batch['input_ids'].to(device)
+        attention_mask = batch['attention_mask'].to(device)
+        labels = batch['label'].to(device)
 
         # 前向传播
-        vul_embeds = model(vul_input_ids, vul_attention_mask)
-        fix_embeds = model(fix_input_ids, fix_attention_mask)
+        embeddings = model(input_ids, attention_mask)
 
         # 计算损失
-        loss = loss_fn(vul_embeds, fix_embeds)
+        loss = loss_fn(embeddings, labels)
 
         # 反向传播
         optimizer.zero_grad()
@@ -203,7 +202,7 @@ def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
         scheduler.step()
 
         total_loss += loss.item()
-        progress_bar.set_postfix({'loss': loss.item()})
+        progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
 
     return total_loss / len(dataloader)
 
@@ -213,56 +212,53 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
     model.eval()
 
     # 加载测试数据
-    test_df = pd.read_csv(os.path.join(data_dir, 'test_ratio.csv'))
+    test_df = pd.read_csv(os.path.join(data_dir, 'test_contrastive.csv'))
     print(f"\n测试数据: {len(test_df)} 条")
 
-    correct = 0
-    total = 0
+    # 加载训练数据构建原型
+    train_df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
 
-    # 构建原型
-    print("构建安全原型和漏洞原型...")
-
-    train_df = pd.read_csv(os.path.join(data_dir, 'train_ratio.csv'))
     vul_embeds_list = []
-    fix_embeds_list = []
+    safe_embeds_list = []
 
-    model.eval()
+    print("构建漏洞原型和安全原型...")
+
     with torch.no_grad():
-        # 采样一部分构建原型
-        sample_size = min(100, len(train_df) // 2)
+        # 采样漏洞代码构建漏洞原型
+        vul_samples = train_df[train_df['label'] == 1].sample(n=min(100, len(train_df[train_df['label'] == 1])), random_state=42)
+        for _, row in vul_samples.iterrows():
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            vul_embeds_list.append(embed.cpu())
 
-        for i in range(0, sample_size * 2, 2):
-            if i + 1 >= len(train_df):
-                break
-
-            # 漏洞代码
-            vul_code = str(train_df.iloc[i]['func_before'])
-            vul_encoding = tokenizer(vul_code, max_length=max_length,
-                                    padding=True, truncation=True, return_tensors='pt')
-            vul_embed = model(vul_encoding['input_ids'].to(device),
-                             vul_encoding['attention_mask'].to(device))
-            vul_embeds_list.append(vul_embed.cpu())
-
-            # 修复代码
-            fix_code = str(train_df.iloc[i]['func_after'])
-            fix_encoding = tokenizer(fix_code, max_length=max_length,
-                                    padding=True, truncation=True, return_tensors='pt')
-            fix_embed = model(fix_encoding['input_ids'].to(device),
-                             fix_encoding['attention_mask'].to(device))
-            fix_embeds_list.append(fix_embed.cpu())
+        # 采样安全代码构建安全原型
+        safe_samples = train_df[train_df['label'] == 0].sample(n=min(100, len(train_df[train_df['label'] == 0])), random_state=42)
+        for _, row in safe_samples.iterrows():
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            safe_embeds_list.append(embed.cpu())
 
         # 计算原型
         vul_prototype = torch.cat(vul_embeds_list, dim=0).mean(dim=0)
-        fix_prototype = torch.cat(fix_embeds_list, dim=0).mean(dim=0)
+        safe_prototype = torch.cat(safe_embeds_list, dim=0).mean(dim=0)
 
-        print(f"原型构建完成: 漏洞原型 {vul_prototype.shape}, 安全原型 {fix_prototype.shape}")
+        print(f"原型构建完成: 漏洞原型 {vul_prototype.shape}, 安全原型 {safe_prototype.shape}")
 
     # 测试
     print("评估测试集...")
+    correct = 0
+    total = 0
+
     with torch.no_grad():
         for idx, row in test_df.iterrows():
-            code = str(row['func_before']) if idx % 2 == 0 else str(row['func_after'])
-            true_label = 1 if idx % 2 == 0 else 0  # 1=漏洞, 0=安全
+            code = str(row['code'])
+            true_label = int(row['label'])  # 1=漏洞, 0=安全
 
             encoding = tokenizer(code, max_length=max_length,
                                padding=True, truncation=True, return_tensors='pt')
@@ -271,10 +267,10 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
 
             # 计算与原型的距离
             vul_dist = torch.norm(embed.cpu() - vul_prototype, p=2)
-            fix_dist = torch.norm(embed.cpu() - fix_prototype, p=2)
+            safe_dist = torch.norm(embed.cpu() - safe_prototype, p=2)
 
             # 预测：离哪个原型更近
-            pred_label = 1 if vul_dist < fix_dist else 0
+            pred_label = 1 if vul_dist < safe_dist else 0
 
             if pred_label == true_label:
                 correct += 1
@@ -291,7 +287,7 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
 
 def main():
     print("=" * 60)
-    print("安全感知编码器训练")
+    print("安全感知编码器训练 - 方案二")
     print("=" * 60)
     print(f"设备: {CONFIG['device']}")
 
