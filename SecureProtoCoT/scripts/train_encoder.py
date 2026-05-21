@@ -26,7 +26,7 @@ from pathlib import Path
 # 配置
 CONFIG = {
     # 模型
-    'model_name': r'/root/autodl-tmp/codebert-base',
+    'model_name': r'/home2/zzl/model/codebert-base',
     'max_length': 512,
     'hidden_size': 768,
     'projection_dim': 256,
@@ -42,8 +42,8 @@ CONFIG = {
     'temperature': 0.07,
 
     # 路径
-    'data_dir': r'/root/autodl-tmp/SecurePath/SecureProtoCoT/data/processed',
-    'output_dir': r'/root/autodl-tmp/outputs/models',
+    'data_dir': r'/home2/zzl/SecurePath/SecureProtoCoT/data/processed',
+    'output_dir': r'/home2/zzl/SecurePath/SecureProtoCoT/outputs/models',
 
     # 其他
     'random_seed': 42,
@@ -80,13 +80,6 @@ class ContrastiveEncoder(nn.Module):
         return projection
 
 class ContrastiveLoss(nn.Module):
-"""
-    对比学习损失函数：同类聚集，异类分离
-
-    输入：一个batch的嵌入和标签
-    - 同label的样本应该相似
-    - 不同label的样本应该不相似
-    """
 
     def __init__(self, temperature=0.07):
         super().__init__()
