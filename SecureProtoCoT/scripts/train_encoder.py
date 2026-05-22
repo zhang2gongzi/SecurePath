@@ -34,7 +34,7 @@ CONFIG = {
     # 训练
     'batch_size': 16,
     'learning_rate': 2e-5,
-    'num_epochs': 10,
+    'num_epochs': 20,
     'warmup_ratio': 0.1,
     'weight_decay': 0.01,
 

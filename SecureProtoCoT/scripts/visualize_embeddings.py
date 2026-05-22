@@ -92,7 +92,7 @@ def plot_tsne(embeddings, labels, output_path):
         learning_rate='auto',
         init='pca',
         random_state=CONFIG['random_seed'],
-        n_iter=1000,
+        max_iter=1000,
         verbose=1
     )
     
