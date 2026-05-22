@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-实验A：MSR测试集自动评估 + 验证集一致性检查
-加载编码器 + 原型，在test_contrastive.csv和val_contrastive.csv上评估
+实验A：MSR测试集自动评估 + 验证集一致性检查 (已集成最佳阈值搜索)
 """
 import os, sys, torch, numpy as np, pandas as pd
 from torch.utils.data import DataLoader, Dataset
@@ -23,7 +22,7 @@ CONFIG = {
     'device': 'cuda' if torch.cuda.is_available() else 'cpu',
 }
 
-# ================= 编码器（与训练时结构一致） =================
+# ================= 编码器 =================
 class ContrastiveEncoder(torch.nn.Module):
     def __init__(self, model_path, projection_dim=256):
         super().__init__()
@@ -59,9 +58,8 @@ class EvalDataset(Dataset):
             'labels': torch.tensor(self.labels[idx])
         }
 
-# ================= 评估函数 =================
-def run_eval(name, df, model, tokenizer, safe_proto, vul_proto, device, max_length, batch_size, output_dir):
-    """对单个数据集运行评估，返回指标字典"""
+# ================= 核心评估函数 =================
+def run_eval(name, df, model, tokenizer, safe_proto, vul_proto, device, max_length, batch_size, output_dir, threshold=0.0):
     print(f"\n{'=' * 60}")
     print(f"[{name}] 样本: 总计 {len(df)}, safe={len(df[df['label']==0])}, vul={len(df[df['label']==1])}")
     print(f"{'=' * 60}")
@@ -81,7 +79,9 @@ def run_eval(name, df, model, tokenizer, safe_proto, vul_proto, device, max_leng
             sim_safe = torch.nn.functional.cosine_similarity(embeddings, safe_proto.unsqueeze(0), dim=1)
             sim_vul = torch.nn.functional.cosine_similarity(embeddings, vul_proto.unsqueeze(0), dim=1)
             scores = sim_safe - sim_vul
-            preds = (scores >= 0).long().cpu().numpy()
+            
+            # ✅ 修复：使用传入的 threshold 替代硬编码的 0
+            preds = (scores >= threshold).long().cpu().numpy()
 
             all_labels.extend(labels.tolist())
             all_preds.extend(preds.tolist())
@@ -97,13 +97,11 @@ def run_eval(name, df, model, tokenizer, safe_proto, vul_proto, device, max_leng
         'auc': roc_auc_score(all_labels, all_scores),
     }
 
-    # 得分分布
     scores_arr = np.array(all_scores)
     labels_arr = np.array(all_labels)
     metrics['safe_mean'] = scores_arr[labels_arr == 0].mean()
     metrics['vul_mean'] = scores_arr[labels_arr == 1].mean()
 
-    # 保存结果
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     result_df = pd.DataFrame({'label': all_labels, 'pred': all_preds, 'score': all_scores})
     out_path = os.path.join(output_dir, f'msr_eval_{name}.csv')
@@ -111,36 +109,73 @@ def run_eval(name, df, model, tokenizer, safe_proto, vul_proto, device, max_leng
 
     return metrics
 
+# ================= 阈值搜索辅助函数 =================
+def find_optimal_threshold(model, tokenizer, df, safe_proto, vul_proto, device, max_length, batch_size):
+    print("🔍 正在验证集上搜索最佳分类阈值...")
+    ds = EvalDataset(df, tokenizer, max_length)
+    dl = DataLoader(ds, batch_size=batch_size, shuffle=False)
+    
+    all_labels, all_scores = [], []
+    with torch.no_grad():
+        for batch in tqdm(dl, desc="[Threshold Search]"):
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].cpu().numpy()
+            
+            embeddings = model(input_ids, attention_mask)
+            sim_safe = torch.nn.functional.cosine_similarity(embeddings, safe_proto.unsqueeze(0), dim=1)
+            sim_vul = torch.nn.functional.cosine_similarity(embeddings, vul_proto.unsqueeze(0), dim=1)
+            scores = sim_safe - sim_vul
+            
+            all_labels.extend(labels.tolist())
+            all_scores.extend(scores.cpu().tolist())
+
+    best_f1, best_thresh = 0.0, 0.0
+    # 根据你之前数据的分布，搜索范围设为 [-0.1, 0.1] 足够覆盖
+    for thresh in np.linspace(-0.1, 0.1, 400):
+        preds = (np.array(all_scores) >= thresh).astype(int)
+        f1 = f1_score(all_labels, preds, zero_division=0)
+        if f1 > best_f1:
+            best_f1, best_thresh = f1, thresh
+            
+    return best_thresh, best_f1
+
 # ================= 主流程 =================
 def main():
     print("=" * 60)
-    print("实验A：MSR测试集自动评估 + 验证集一致性检查")
+    print("实验A：MSR测试集自动评估 + 验证集一致性检查 (阈值优化版)")
     print("=" * 60)
     print(f"设备: {CONFIG['device']}")
 
-    # 1. 加载模型
+    # 1. 加载模型与原型
     print(f"\n加载编码器: {CONFIG['model_path']}")
     model = ContrastiveEncoder(CONFIG['model_path'], projection_dim=CONFIG['projection_dim'])
     model = model.to(CONFIG['device'])
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained(CONFIG['model_path'])
 
-    # 2. 加载原型
     safe_proto = torch.load(os.path.join(CONFIG['proto_dir'], 'safe_prototype.pt'), map_location=CONFIG['device'])
     vul_proto = torch.load(os.path.join(CONFIG['proto_dir'], 'vul_prototype.pt'), map_location=CONFIG['device'])
     print(f"  安全原型: {safe_proto.shape}, 漏洞原型: {vul_proto.shape}")
 
-    # 3. 加载数据
+    # 2. 加载数据
     test_df = pd.read_csv(os.path.join(CONFIG['data_dir'], 'test_contrastive.csv'))
     val_df  = pd.read_csv(os.path.join(CONFIG['data_dir'], 'val_contrastive.csv'))
 
-    # 4. 分别在 test 和 val 上评估
-    test_metrics = run_eval('test', test_df, model, tokenizer, safe_proto, vul_proto,
-                            CONFIG['device'], CONFIG['max_length'], CONFIG['batch_size'], CONFIG['output_dir'])
-    val_metrics  = run_eval('val',  val_df,  model, tokenizer, safe_proto, vul_proto,
-                            CONFIG['device'], CONFIG['max_length'], CONFIG['batch_size'], CONFIG['output_dir'])
+    # 3. ✅ 关键：先在验证集上找最佳阈值
+    best_thresh, val_f1 = find_optimal_threshold(
+        model, tokenizer, val_df, safe_proto, vul_proto,
+        CONFIG['device'], CONFIG['max_length'], CONFIG['batch_size']
+    )
+    print(f"✅ 最佳阈值: {best_thresh:.4f} (Val F1 提升至: {val_f1:.4f})\n")
 
-    # 5. 对比报告
+    # 4. 使用最佳阈值评估 test 和 val
+    test_metrics = run_eval('test', test_df, model, tokenizer, safe_proto, vul_proto,
+                            CONFIG['device'], CONFIG['max_length'], CONFIG['batch_size'], CONFIG['output_dir'], threshold=best_thresh)
+    val_metrics  = run_eval('val',  val_df,  model, tokenizer, safe_proto, vul_proto,
+                            CONFIG['device'], CONFIG['max_length'], CONFIG['batch_size'], CONFIG['output_dir'], threshold=best_thresh)
+
+    # 5. 输出报告（保持你原有的格式）
     print(f"\n{'=' * 60}")
     print("评估结果汇总")
     print(f"{'=' * 60}")
@@ -167,23 +202,20 @@ def main():
         diff = abs(tv - vv)
 
         if key == 'total':
-            ok = True  # 样本数无需一致性判断
-            mark = ''
+            ok = True; mark = ''
         else:
-            ok = diff < 0.05  # 差异小于 5% 视为一致
+            ok = diff < 0.05
             mark = '✅' if ok else '⚠️'
             if not ok: all_ok = False
 
         print(f"{label:<18} {tv:>10.4f} {vv:>10.4f} {diff:>10.4f} {mark:>10}")
 
-    # 6. 一致性判断
     print(f"\n{'=' * 60}")
     if all_ok:
         print("✅ 一致性检查通过: Test 和 Val 指标差异均 < 0.05")
     else:
         print("⚠️ 一致性检查未通过: 存在指标差异 >= 0.05，请排查")
 
-    # 7. 实验A 达标判断（以 Test 集为准）
     f1_test = test_metrics['f1']
     auc_test = test_metrics['auc']
     print(f"\n{'=' * 60}")
