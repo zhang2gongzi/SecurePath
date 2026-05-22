@@ -32,7 +32,7 @@ CONFIG = {
     'projection_dim': 256,
 
     # 训练
-    'batch_size': 16,
+    'batch_size': 24,
     'learning_rate': 2e-5,
     'num_epochs': 20,
     'warmup_ratio': 0.1,
@@ -395,7 +395,7 @@ def main():
         # 保存最佳模型
         if accuracy > best_accuracy:
             best_accuracy = accuracy
-            model_path = output_dir / 'best_model'
+            model_path = output_dir / 'best_model0522'
             model.encoder.save_pretrained(model_path)
             tokenizer.save_pretrained(model_path)
             print(f"保存最佳模型到: {model_path}")
@@ -406,7 +406,7 @@ def main():
     print("\n" + "=" * 60)
     print(f"训练完成! 最佳准确率: {best_accuracy:.4f}")
     print(f"输出文件:")
-    print(f"  - 编码器: {output_dir / 'best_model'}")
+    print(f"  - 编码器: {output_dir / 'best_model0522'}")
     print(f"  - 漏洞原型: {output_dir / 'vul_prototype.pt'}")
     print(f"  - 安全原型: {output_dir / 'safe_prototype.pt'}")
     print("=" * 60)

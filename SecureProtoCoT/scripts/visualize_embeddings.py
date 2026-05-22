@@ -16,12 +16,12 @@ from tqdm import tqdm
 
 # ============ 配置 ============
 CONFIG = {
-    'model_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/best_model',
+    'model_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/best_model0522',
     'data_dir': '/home2/zzl/SecurePath/SecureProtoCoT/data/processed',
     'max_length': 512,
     'sample_size': 400,  # 可视化样本数（每类 200）
     'random_seed': 42,
-    'output_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/visualizations/tsne_plot.png',
+    'output_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/visualizations/tsne_plot0522.png',
 }
 
 # 设置随机种子
