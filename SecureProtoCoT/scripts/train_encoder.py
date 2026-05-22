@@ -80,7 +80,6 @@ class ContrastiveEncoder(nn.Module):
         return projection
 
 class ContrastiveLoss(nn.Module):
-
     def __init__(self, temperature=0.07):
         super().__init__()
         self.temperature = temperature
@@ -277,6 +276,56 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
     return accuracy
 
 
+def build_and_save_prototypes(model, data_dir, tokenizer, device, output_dir, max_length=512):
+    """构建并保存原型向量"""
+    model.eval()
+
+    # 加载训练数据
+    train_df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
+
+    vul_embeds_list = []
+    safe_embeds_list = []
+
+    print("\n构建原型向量...")
+
+    with torch.no_grad():
+        # 编码所有漏洞代码
+        vul_df = train_df[train_df['label'] == 1]
+        print(f"  编码 {len(vul_df)} 个漏洞样本...")
+        for _, row in tqdm(vul_df.iterrows(), total=len(vul_df)):
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            vul_embeds_list.append(embed.cpu())
+
+        # 编码所有安全代码
+        safe_df = train_df[train_df['label'] == 0]
+        print(f"  编码 {len(safe_df)} 个安全样本...")
+        for _, row in tqdm(safe_df.iterrows(), total=len(safe_df)):
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            safe_embeds_list.append(embed.cpu())
+
+    # 计算原型（均值向量）
+    vul_prototype = torch.cat(vul_embeds_list, dim=0).mean(dim=0)  # [projection_dim]
+    safe_prototype = torch.cat(safe_embeds_list, dim=0).mean(dim=0)
+
+    print(f"  漏洞原型: {vul_prototype.shape}")
+    print(f"  安全原型: {safe_prototype.shape}")
+
+    # 保存原型
+    torch.save(vul_prototype, output_dir / 'vul_prototype.pt')
+    torch.save(safe_prototype, output_dir / 'safe_prototype.pt')
+    print(f"  保存原型到: {output_dir}")
+
+    return vul_prototype, safe_prototype
+
+
 def main():
     print("=" * 60)
     print("安全感知编码器训练 - 方案二")
@@ -351,8 +400,15 @@ def main():
             tokenizer.save_pretrained(model_path)
             print(f"保存最佳模型到: {model_path}")
 
+    # 构建并保存原型
+    build_and_save_prototypes(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], output_dir, CONFIG['max_length'])
+
     print("\n" + "=" * 60)
     print(f"训练完成! 最佳准确率: {best_accuracy:.4f}")
+    print(f"输出文件:")
+    print(f"  - 编码器: {output_dir / 'best_model'}")
+    print(f"  - 漏洞原型: {output_dir / 'vul_prototype.pt'}")
+    print(f"  - 安全原型: {output_dir / 'safe_prototype.pt'}")
     print("=" * 60)
 
 

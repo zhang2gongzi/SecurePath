@@ -64,26 +64,22 @@ def encode_codes(model, tokenizer, codes, device, max_length=512):
 def load_and_sample_data(data_dir, sample_size=400):
     """加载测试数据并采样"""
     print("📊 加载测试数据...")
-    test_df = pd.read_csv(os.path.join(data_dir, 'test_ratio.csv'))
-    
-    # 分离漏洞和修复样本
+    test_df = pd.read_csv(os.path.join(data_dir, 'test_contrastive.csv'))
+
+    # 分离漏洞和安全样本（方案二格式：code, label）
     vul_samples = []
-    fix_samples = []
-    
-    for idx, row in test_df.iterrows():
-        code = str(row['func_before']) if idx % 2 == 0 else str(row['func_after'])
-        label = 1 if idx % 2 == 0 else 0  # 1=漏洞, 0=修复
-        
-        if label == 1 and len(vul_samples) < sample_size // 2:
-            vul_samples.append(code)
-        elif label == 0 and len(fix_samples) < sample_size // 2:
-            fix_samples.append(code)
-        
-        if len(vul_samples) + len(fix_samples) >= sample_size:
-            break
-    
-    print(f"✅ 采样完成: 漏洞={len(vul_samples)}, 修复={len(fix_samples)}")
-    return vul_samples, fix_samples
+    safe_samples = []
+
+    # label=1 是漏洞代码，label=0 是安全代码
+    vul_df = test_df[test_df['label'] == 1]
+    safe_df = test_df[test_df['label'] == 0]
+
+    # 随机采样
+    vul_samples = vul_df.sample(n=min(sample_size // 2, len(vul_df)), random_state=CONFIG['random_seed'])['code'].astype(str).tolist()
+    safe_samples = safe_df.sample(n=min(sample_size // 2, len(safe_df)), random_state=CONFIG['random_seed'])['code'].astype(str).tolist()
+
+    print(f"✅ 采样完成: 漏洞={len(vul_samples)}, 安全={len(safe_samples)}")
+    return vul_samples, safe_samples
 
 def plot_tsne(embeddings, labels, output_path):
     """t-SNE 降维并绘图"""
@@ -119,20 +115,20 @@ def plot_tsne(embeddings, labels, output_path):
         linewidth=0.5
     )
     
-    # 修复样本 (蓝色)
-    fix_mask = labels == 0
+    # 安全样本 (蓝色)
+    safe_mask = labels == 0
     plt.scatter(
-        embeddings_2d[fix_mask, 0], 
-        embeddings_2d[fix_mask, 1],
-        c='#4ECDC4', 
-        label='Fixed Code',
+        embeddings_2d[safe_mask, 0],
+        embeddings_2d[safe_mask, 1],
+        c='#4ECDC4',
+        label='Safe Code',
         alpha=0.6,
         s=30,
         edgecolors='white',
         linewidth=0.5
     )
-    
-    plt.title('t-SNE Visualization: Vulnerable vs Fixed Code Embeddings', fontsize=14, fontweight='bold')
+
+    plt.title('t-SNE Visualization: Vulnerable vs Safe Code Embeddings', fontsize=14, fontweight='bold')
     plt.xlabel('t-SNE Dimension 1', fontsize=12)
     plt.ylabel('t-SNE Dimension 2', fontsize=12)
     plt.legend(fontsize=10, frameon=True)
@@ -153,26 +149,26 @@ def plot_tsne(embeddings, labels, output_path):
 def calculate_separation_score(embeddings_2d, labels):
     """简单计算两类样本的分离程度"""
     vul_embeds = embeddings_2d[labels == 1]
-    fix_embeds = embeddings_2d[labels == 0]
-    
+    safe_embeds = embeddings_2d[labels == 0]
+
     # 计算类内距离和类间距离
     vul_center = vul_embeds.mean(axis=0)
-    fix_center = fix_embeds.mean(axis=0)
-    
+    safe_center = safe_embeds.mean(axis=0)
+
     within_vul = np.mean([np.linalg.norm(e - vul_center) for e in vul_embeds])
-    within_fix = np.mean([np.linalg.norm(e - fix_center) for e in fix_embeds])
-    between = np.linalg.norm(vul_center - fix_center)
-    
+    within_safe = np.mean([np.linalg.norm(e - safe_center) for e in safe_embeds])
+    between = np.linalg.norm(vul_center - safe_center)
+
     # 分离分数: 类间距离 / 平均类内距离 (越大越好)
-    separation = between / ((within_vul + within_fix) / 2)
-    
+    separation = between / ((within_vul + within_safe) / 2)
+
     print(f"\n📐 分离度分析:")
     print(f"   漏洞类中心: ({vul_center[0]:.3f}, {vul_center[1]:.3f})")
-    print(f"   修复类中心: ({fix_center[0]:.3f}, {fix_center[1]:.3f})")
+    print(f"   安全类中心: ({safe_center[0]:.3f}, {safe_center[1]:.3f})")
     print(f"   类间距离: {between:.3f}")
-    print(f"   平均类内距离: {(within_vul + within_fix)/2:.3f}")
+    print(f"   平均类内距离: {(within_vul + within_safe)/2:.3f}")
     print(f"   🔍 分离分数: {separation:.3f} (≥1.5 表示较好分离)")
-    
+
     return separation
 
 def main():
@@ -185,19 +181,19 @@ def main():
     model, tokenizer = load_model_and_tokenizer(CONFIG['model_path'])
     
     # 2. 加载并采样数据
-    vul_codes, fix_codes = load_and_sample_data(
-        CONFIG['data_dir'], 
+    vul_codes, safe_codes = load_and_sample_data(
+        CONFIG['data_dir'],
         sample_size=CONFIG['sample_size']
     )
-    
+
     # 3. 编码为嵌入
     print("🔄 编码嵌入向量...")
     vul_embeds = encode_codes(model, tokenizer, vul_codes, device, CONFIG['max_length'])
-    fix_embeds = encode_codes(model, tokenizer, fix_codes, device, CONFIG['max_length'])
+    safe_embeds = encode_codes(model, tokenizer, safe_codes, device, CONFIG['max_length'])
     
     # 合并
-    all_embeds = np.vstack([vul_embeds, fix_embeds])
-    all_labels = np.array([1] * len(vul_embeds) + [0] * len(fix_embeds))
+    all_embeds = np.vstack([vul_embeds, safe_embeds])
+    all_labels = np.array([1] * len(vul_embeds) + [0] * len(safe_embeds))
     
     print(f"✅ 嵌入维度: {all_embeds.shape}")
     
