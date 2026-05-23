@@ -79,8 +79,14 @@ class ContrastiveEncoder(nn.Module):
 
         return projection
 
-
 class ContrastiveLoss(nn.Module):
+"""
+    对比学习损失函数：同类聚集，异类分离
+
+    输入：一个batch的嵌入和标签
+    - 同label的样本应该相似
+    - 不同label的样本应该不相似
+    """
 
     def __init__(self, temperature=0.07):
         super().__init__()
@@ -144,6 +150,7 @@ class CodeDataset(Dataset):
             'attention_mask': encoding['attention_mask'].squeeze(0),
             'label': torch.tensor(self.labels[idx])
         }
+
 
 
 def load_data(data_dir, tokenizer, max_length, batch_size):
@@ -348,7 +355,6 @@ def main():
             best_accuracy = accuracy
             model_path = output_dir / 'best_model'
             model.encoder.save_pretrained(model_path)
-            torch.save(model.state_dict(), output_dir / 'model_state.pt')
             tokenizer.save_pretrained(model_path)
             print(f"保存最佳模型到: {model_path}")
 
