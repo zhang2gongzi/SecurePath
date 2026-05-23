@@ -52,134 +52,6 @@ CONFIG = {
 
 
 class ContrastiveEncoder(nn.Module):
-    """对比学习编码器"""
-
-    def __init__(self, model_name, projection_dim=256):
-        super().__init__()
-        self.encoder = AutoModel.from_pretrained(model_name)
-        self.hidden_size = self.encoder.config.hidden_size
-
-        # 投影头
-        self.projection = nn.Sequential(
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.ReLU(),
-            nn.Linear(self.hidden_size, projection_dim)
-        )
-
-    def forward(self, input_ids, attention_mask):
-        # 获取[CLS]表示
-        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = outputs.last_hidden_state[:, 0, :]
-
-        # 投影
-        projection = self.projection(cls_embedding)
-
-        # L2归一化
-        projection = F.normalize(projection, p=2, dim=1)
-
-        return projection
-
-
-class ContrastiveLoss(nn.Module):
-
-    def __init__(self, temperature=0.07):
-        super().__init__()
-        self.temperature = temperature
-
-    def forward(self, embeddings, labels):
-        """
-        Args:
-        embeddings: [batch_size, projection_dim]
-            labels: [batch_size], 1=漏洞, 0=安全
-        """
-        batch_size = embeddings.size(0)
-        device = embeddings.device
-
-        # 计算相似度矩阵
-        similarity = torch.mm(embeddings, embeddings.t()) / self.temperature
-
-        # 创建标签mask：同label为正样本对
-        labels = labels.view(-1, 1)
-        mask = (labels == labels.t()).float()
-
-        # 排除自身
-        mask.fill_diagonal_(0.0)
-
-        # 数值稳定的 InfoNCE Loss
-        sim_max = torch.max(similarity, dim=1, keepdim=True).values
-        exp_sim = torch.exp(similarity - sim_max)
-
-        # 分子：同类相似度之和
-        pos_sum = (exp_sim * mask).sum(dim=1) + 1e-8
-        # 分母：所有相似度之和（排除自身）
-        all_sum = exp_sim.sum(dim=1) - torch.diag(exp_sim) + 1e-8
-
-        loss = -torch.log(pos_sum / all_sum).mean()
-
-        return loss
-
-
-class CodeDataset(Dataset):
-    """代码数据集"""
-
-    def __init__(self, df, tokenizer, max_length):
-        self.codes = df['code'].astype(str).tolist()
-        self.labels = df['label'].astype(int).tolist()
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-
-    def __len__(self):
-        return len(self.codes)
-
-    def __getitem__(self, idx):
-        encoding = self.tokenizer(
-            self.codes[idx],
-            max_length=self.max_length,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt'
-        )
-        return {
-            'input_ids': encoding['input_ids'].squeeze(0),
-            'attention_mask': encoding['attention_mask'].squeeze(0),
-            'label': torch.tensor(self.labels[idx])
-        }
-
-
-def load_data(data_dir, tokenizer, max_length, batch_size):
-    """加载数据"""
-    print("加载数据...")
-
-    # 加载训练数据
-    df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
-    print(f"训练数据: {len(df)} 条")
-    print(f"  漏洞样本: {len(df[df['label'] == 1])}")
-    print(f"  安全样本: {len(df[df['label'] == 0])}")
-
-    # 创建数据集
-    dataset = CodeDataset(df, tokenizer, max_length)
-
-    dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=0
-    )
-
-    return dataloader
-
-
-def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
-    """训练一个epoch"""
-    model.train()
-    total_loss = 0
-
-    progress_bar = tqdm(dataloader, desc="Training")
-
-    for batch in progress_bar:
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-        labels = batch['label'].to(device)
 
         # 前向传播
         embeddings = model(input_ids, attention_mask)
@@ -359,3 +231,132 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    """对比学习编码器"""
+
+    def __init__(self, model_name, projection_dim=256):
+        super().__init__()
+        self.encoder = AutoModel.from_pretrained(model_name)
+        self.hidden_size = self.encoder.config.hidden_size
+
+        # 投影头
+        self.projection = nn.Sequential(
+            nn.Linear(self.hidden_size, self.hidden_size),
+            nn.ReLU(),
+            nn.Linear(self.hidden_size, projection_dim)
+        )
+
+    def forward(self, input_ids, attention_mask):
+        # 获取[CLS]表示
+        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+        cls_embedding = outputs.last_hidden_state[:, 0, :]
+
+        # 投影
+        projection = self.projection(cls_embedding)
+
+        # L2归一化
+        projection = F.normalize(projection, p=2, dim=1)
+
+        return projection
+
+class ContrastiveLoss(nn.Module):
+
+    def __init__(self, temperature=0.07):
+        super().__init__()
+        self.temperature = temperature
+
+    def forward(self, embeddings, labels):
+        """
+        Args:
+        embeddings: [batch_size, projection_dim]
+            labels: [batch_size], 1=漏洞, 0=安全
+        """
+        batch_size = embeddings.size(0)
+        device = embeddings.device
+
+        # 计算相似度矩阵
+        similarity = torch.mm(embeddings, embeddings.t()) / self.temperature
+
+        # 创建标签mask：同label为正样本对
+        labels = labels.view(-1, 1)
+        mask = (labels == labels.t()).float()
+
+        # 排除自身
+        mask.fill_diagonal_(0.0)
+
+        # 数值稳定的 InfoNCE Loss
+        sim_max = torch.max(similarity, dim=1, keepdim=True).values
+        exp_sim = torch.exp(similarity - sim_max)
+
+        # 分子：同类相似度之和
+        pos_sum = (exp_sim * mask).sum(dim=1) + 1e-8
+        # 分母：所有相似度之和（排除自身）
+        all_sum = exp_sim.sum(dim=1) - torch.diag(exp_sim) + 1e-8
+
+        loss = -torch.log(pos_sum / all_sum).mean()
+
+        return loss
+
+
+class CodeDataset(Dataset):
+    """代码数据集"""
+
+    def __init__(self, df, tokenizer, max_length):
+        self.codes = df['code'].astype(str).tolist()
+        self.labels = df['label'].astype(int).tolist()
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.codes)
+
+    def __getitem__(self, idx):
+        encoding = self.tokenizer(
+            self.codes[idx],
+            max_length=self.max_length,
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
+        )
+        return {
+            'input_ids': encoding['input_ids'].squeeze(0),
+            'attention_mask': encoding['attention_mask'].squeeze(0),
+            'label': torch.tensor(self.labels[idx])
+        }
+
+
+
+def load_data(data_dir, tokenizer, max_length, batch_size):
+    """加载数据"""
+    print("加载数据...")
+
+    # 加载训练数据
+    df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
+    print(f"训练数据: {len(df)} 条")
+    print(f"  漏洞样本: {len(df[df['label'] == 1])}")
+    print(f"  安全样本: {len(df[df['label'] == 0])}")
+
+    # 创建数据集
+    dataset = CodeDataset(df, tokenizer, max_length)
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0
+    )
+
+    return dataloader
+
+
+def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
+    """训练一个epoch"""
+    model.train()
+    total_loss = 0
+
+    progress_bar = tqdm(dataloader, desc="Training")
+
+    for batch in progress_bar:
+        input_ids = batch['input_ids'].to(device)
+        attention_mask = batch['attention_mask'].to(device)
+        labels = batch['label'].to(device)
