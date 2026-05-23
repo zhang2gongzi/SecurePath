@@ -66,13 +66,21 @@ class ContrastiveEncoder(nn.Module):
         return projection
 
 
-def load_model(model_path, device):
+def load_model(model_path, output_dir, device):
     """加载模型"""
     print(f"加载模型: {model_path}")
     model = ContrastiveEncoder(model_path, projection_dim=CONFIG['projection_dim'])
     model = model.to(device)
-    model.eval()
 
+    # 加载完整模型参数（编码器+投影头）
+    state_dict_path = os.path.join(output_dir, 'model_state.pt')
+    if os.path.exists(state_dict_path):
+        model.load_state_dict(torch.load(state_dict_path, map_location=device))
+        print("已加载完整模型参数（含投影头）")
+    else:
+        print("⚠️ 未找到完整模型参数，投影头为随机初始化")
+
+    model.eval()
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     print(f"模型加载完成，设备: {device}")
 
@@ -160,7 +168,7 @@ def main():
     print(f"设备: {CONFIG['device']}")
 
     # 加载模型
-    model, tokenizer = load_model(CONFIG['model_path'], CONFIG['device'])
+    model, tokenizer = load_model(CONFIG['model_path'], CONFIG['output_dir'], CONFIG['device'])
 
     # 构建原型
     vul_proto, safe_proto = build_prototypes(
