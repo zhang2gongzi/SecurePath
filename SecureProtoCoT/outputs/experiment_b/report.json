@@ -1,0 +1,130 @@
+{
+  "num_prompts": 15,
+  "num_candidates_per_prompt": 5,
+  "total_candidates": 75,
+  "avg_p_vul_random": 0.0006561721694500496,
+  "avg_p_vul_classifier": 0.0002851687492996765,
+  "p_vul_reduction": 0.0003710034201503731,
+  "per_prompt": [
+    {
+      "prompt_id": "P01_buffer_copy",
+      "avg_p_vul": 0.0014385467395186425,
+      "min_p_vul": 0.00030013814102858305,
+      "max_p_vul": 0.004298612009733915,
+      "random_pick_p_vul": 0.00045933021465316415,
+      "classifier_pick_p_vul": 0.00030013814102858305
+    },
+    {
+      "prompt_id": "P02_array_access",
+      "avg_p_vul": 0.00045551409712061284,
+      "min_p_vul": 0.0001607342273928225,
+      "max_p_vul": 0.000884735316503793,
+      "random_pick_p_vul": 0.0007005338557064533,
+      "classifier_pick_p_vul": 0.0001607342273928225
+    },
+    {
+      "prompt_id": "P03_memory_alloc",
+      "avg_p_vul": 9.53151989961043e-05,
+      "min_p_vul": 5.50411241420079e-05,
+      "max_p_vul": 0.0001728993229335174,
+      "random_pick_p_vul": 5.50411241420079e-05,
+      "classifier_pick_p_vul": 5.50411241420079e-05
+    },
+    {
+      "prompt_id": "P04_string_concat",
+      "avg_p_vul": 0.0010193252535827923,
+      "min_p_vul": 5.570413122768514e-05,
+      "max_p_vul": 0.004226268269121647,
+      "random_pick_p_vul": 5.570413122768514e-05,
+      "classifier_pick_p_vul": 5.570413122768514e-05
+    },
+    {
+      "prompt_id": "P05_free_memory",
+      "avg_p_vul": 0.00012402935535646976,
+      "min_p_vul": 0.0001012619468383491,
+      "max_p_vul": 0.00013973664317745715,
+      "random_pick_p_vul": 0.00011214926780667156,
+      "classifier_pick_p_vul": 0.0001012619468383491
+    },
+    {
+      "prompt_id": "P06_file_read",
+      "avg_p_vul": 0.0002958848868729547,
+      "min_p_vul": 0.00016289491031784564,
+      "max_p_vul": 0.0006496812566183507,
+      "random_pick_p_vul": 0.00016786373453214765,
+      "classifier_pick_p_vul": 0.00016289491031784564
+    },
+    {
+      "prompt_id": "P07_int_parse",
+      "avg_p_vul": 0.26705118399113414,
+      "min_p_vul": 0.0013354617403820157,
+      "max_p_vul": 0.8419973254203796,
+      "random_pick_p_vul": 0.0018403654685243964,
+      "classifier_pick_p_vul": 0.0013354617403820157
+    },
+    {
+      "prompt_id": "P08_linked_list",
+      "avg_p_vul": 0.0004891100936220028,
+      "min_p_vul": 0.00010585791460471228,
+      "max_p_vul": 0.0010039714397862554,
+      "random_pick_p_vul": 0.00010585791460471228,
+      "classifier_pick_p_vul": 0.00010585791460471228
+    },
+    {
+      "prompt_id": "P09_memcpy_wrapper",
+      "avg_p_vul": 0.0006842855596914888,
+      "min_p_vul": 0.00013604658306576312,
+      "max_p_vul": 0.0019251570338383317,
+      "random_pick_p_vul": 0.0019251570338383317,
+      "classifier_pick_p_vul": 0.00013604658306576312
+    },
+    {
+      "prompt_id": "P10_input_loop",
+      "avg_p_vul": 0.003912126587238163,
+      "min_p_vul": 0.0007694553351029754,
+      "max_p_vul": 0.011474600061774254,
+      "random_pick_p_vul": 0.000846710114274174,
+      "classifier_pick_p_vul": 0.0007694553351029754
+    },
+    {
+      "prompt_id": "P11_struct_copy",
+      "avg_p_vul": 0.0011169718782184646,
+      "min_p_vul": 0.00012720025551971048,
+      "max_p_vul": 0.0029284092597663403,
+      "random_pick_p_vul": 0.0011383779346942902,
+      "classifier_pick_p_vul": 0.00012720025551971048
+    },
+    {
+      "prompt_id": "P12_recursive_free",
+      "avg_p_vul": 0.0002194672924815677,
+      "min_p_vul": 0.00010083633242174983,
+      "max_p_vul": 0.0005699972389265895,
+      "random_pick_p_vul": 0.00010083633242174983,
+      "classifier_pick_p_vul": 0.00010083633242174983
+    },
+    {
+      "prompt_id": "P13_sprintf_use",
+      "avg_p_vul": 0.0015162460898864084,
+      "min_p_vul": 0.00011936501687159762,
+      "max_p_vul": 0.0029803046490997076,
+      "random_pick_p_vul": 0.00011936501687159762,
+      "classifier_pick_p_vul": 0.00011936501687159762
+    },
+    {
+      "prompt_id": "P14_realloc_array",
+      "avg_p_vul": 0.00012798854731954634,
+      "min_p_vul": 7.942843512864783e-05,
+      "max_p_vul": 0.0001732597447698936,
+      "random_pick_p_vul": 0.00015608799003530294,
+      "classifier_pick_p_vul": 7.942843512864783e-05
+    },
+    {
+      "prompt_id": "P15_cmd_arg",
+      "avg_p_vul": 0.08074120971141382,
+      "min_p_vul": 0.0006681051454506814,
+      "max_p_vul": 0.38880401849746704,
+      "random_pick_p_vul": 0.0020592024084180593,
+      "classifier_pick_p_vul": 0.0006681051454506814
+    }
+  ]
+}

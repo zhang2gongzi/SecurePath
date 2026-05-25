@@ -2,56 +2,56 @@
   "sampling": {
     "CWE-119": {
       "vul_available": 1427,
-      "vul_sampled": 500,
+      "vul_sampled": 1427,
       "safe_available": 17570,
-      "safe_sampled": 500
+      "safe_sampled": 1427
     },
     "CWE-416": {
       "vul_available": 254,
       "vul_sampled": 254,
       "safe_available": 6124,
-      "safe_sampled": 500
+      "safe_sampled": 254
     },
     "CWE-125": {
       "vul_available": 456,
       "vul_sampled": 456,
       "safe_available": 5646,
-      "safe_sampled": 500
+      "safe_sampled": 456
     },
     "CWE-476": {
       "vul_available": 180,
       "vul_sampled": 180,
       "safe_available": 3519,
-      "safe_sampled": 500
+      "safe_sampled": 180
     },
     "CWE-190": {
       "vul_available": 266,
       "vul_sampled": 266,
       "safe_available": 2649,
-      "safe_sampled": 500
+      "safe_sampled": 266
     },
     "CWE-787": {
       "vul_available": 166,
       "vul_sampled": 166,
       "safe_available": 1942,
-      "safe_sampled": 500
+      "safe_sampled": 166
     }
   },
   "final": {
     "train": {
-      "total": 3375,
-      "vul": 1275,
-      "safe": 2100
+      "total": 3848,
+      "vul": 1924,
+      "safe": 1924
     },
     "val": {
-      "total": 482,
-      "vul": 182,
-      "safe": 300
+      "total": 548,
+      "vul": 274,
+      "safe": 274
     },
     "test": {
-      "total": 965,
-      "vul": 365,
-      "safe": 600
+      "total": 1102,
+      "vul": 551,
+      "safe": 551
     }
   }
 }
