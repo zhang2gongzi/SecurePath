@@ -14,11 +14,11 @@ from attention_pooling import SafetyClassifier
 
 # ================= 配置 =================
 CONFIG = {
-    'openai_api_key': os.getenv('OPENAI_API_KEY', 'sk-848301f45186435d9c04e532056301ba'),
+    'openai_api_key': os.getenv('OPENAI_API_KEY', 's'),
     'openai_base_url': os.getenv('OPENAI_BASE_URL', 'https://api.deepseek.com'),
     'llm_model': os.getenv('LLM_MODEL', 'deepseek-v4-pro'),
-    'llm_temperature': 0.8,
-    'num_candidates': 5,
+    'llm_temperature': 1.2,
+    'num_candidates': 10,
 
     'encoder_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/best_model',
     'classifier_path': '/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/safety_classifier_attn.pt',

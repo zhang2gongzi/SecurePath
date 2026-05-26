@@ -115,7 +115,7 @@ def main():
 
     # 保存
     pd.DataFrame(rows + [total_row]).to_csv(
-        os.path.join(CONFIG['data_dir'], '../outputs/results/per_cwe_metrics.csv'), index=False)
+        os.path.join(CONFIG['data_dir'], '/home2/zzl/SecurePath/SecureProtoCoT/outputs/results/per_cwe_metrics.csv'), index=False)
     print(f"\n结果已保存: outputs/results/per_cwe_metrics.csv")
 
 
