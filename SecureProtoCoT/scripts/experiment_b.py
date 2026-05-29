@@ -14,8 +14,8 @@ from attention_pooling import SafetyClassifier
 
 # ================= 配置 =================
 CONFIG = {
-    'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
-    'openai_base_url': os.getenv('OPENAI_BASE_URL', 'https://api.deepseek.com'),
+    'openai_api_key': os.getenv('OPENAI_API_KEY', 'sk-43433e3f388b48498a3d9f5669cd42a2'),
+    'openai_base_url': os.getenv('OPENAI_BASE_URL', 'https://api.deepseek.com/v1'),
     'llm_model': os.getenv('LLM_MODEL', 'deepseek-v4-pro'),
     'llm_temperature': 1.2,
     'num_candidates': 10,
