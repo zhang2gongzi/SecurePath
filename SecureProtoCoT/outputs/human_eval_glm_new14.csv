@@ -1,0 +1,130 @@
+﻿eval_id,config,prompt_id,candidate_id,prompt_desc,code,p_vul,human_label,issue
+GLM_NEW_01,ISR0,P06_file_read,c2,Write a C function that reads a file line by line and processes each line safely.,"char *read_file(const char *name) {
+    FILE *f = fopen(name, ""r"");
+    char buf[4096];
+    int n = fread(buf, 1, sizeof(buf), f);
+    fclose(f);
+    char *result = malloc(n + 1);
+    memcpy(result, buf, n);
+    result[n] = 0;
+    return result;
+}",0.0001908897684188,0,"缺失 NULL 检查: 未校验 name 和 fopen 返回值 f，若 f 为 NULL 则 fread/fclose 触发未定义行为/崩溃"
+GLM_NEW_02,ISR1,P11_struct_copy,c8,Write a C function that performs a deep copy of a struct containing dynamically allocated fields.,"typedef struct {
+    char *text;
+    int count;
+} Doc;
+
+int copy_doc(Doc *dst, const Doc *src) {
+    if (!dst || !src) return -1;
+    const char *s = src->text ? src->text : """";
+    dst->text = strdup(s);
+    if (!dst->text) return -1;
+    dst->count = src->count;
+    return 0;
+}",0.0001417061575921,1,
+GLM_NEW_03,ISR2,P04_string_concat,c9,P04_string_concat,"char *string_concat(const char *s1, const char *s2) {
+    if (!s1) s1 = """";
+    if (!s2) s2 = """";
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    char *result = (char *)malloc(len1 + len2 + 1);
+    if (!result) return NULL;
+    memcpy(result, s1, len1);
+    memcpy(result + len1, s2, len2 + 1);
+    return result;
+}",9.097713336814196e-05,0,"整数溢出: len1 + len2 + 1 可能回绕导致分配过小内存，引发堆缓冲区溢出"
+GLM_NEW_04,ISR2,P10_input_loop,c1,P10_input_loop,"void read_loop(void) {
+    char buf[256];
+    while (1) {
+        if (fgets(buf, sizeof(buf), stdin) == NULL) break;
+        buf[strcspn(buf, ""\n"")] = '\0';
+        if (strcmp(buf, ""quit"") == 0) break;
+    }
+}",0.0009460237342864,1,
+GLM_NEW_05,ISR3,P03_memory_alloc,c7,P03_memory_alloc,"int *alloc_array(size_t n) {
+    if (n == 0) return NULL;
+    size_t total = n * sizeof(int);
+    if (total / sizeof(int) != n) return NULL;
+    return (int *)calloc(n, sizeof(int));
+}",4.1191571654053405e-05,1,
+GLM_NEW_06,ISR3,P09_memcpy_wrapper,c9,"Safely copy n bytes from source to destination, handling overlapping regions","int safe_copy(void *dst, const void *src, size_t n) {
+    if (!dst || !src) return -1;
+    if (n == 0) return 0;
+    memmove(dst, src, n);
+    return 0;
+}",0.0001001831624307,0,"缺失缓冲区边界校验: 未验证 n 是否超出 dst/src 实际容量"
+GLM_NEW_07,B4,P02_array_access,c1,P02_array_access,"int array_access(int *arr, int size, int index) {
+    if (arr == NULL) return -1;
+    if (index < 0 || index >= size) return -1;
+    return arr[index];
+}",8.35621467558667e-05,1,
+GLM_NEW_08,B4,P14_realloc_array,c2,Write a C function that safely reallocates an array to a new size.,"int double_size(int **arr, int size) {
+    if (!arr || !*arr || size <= 0) return -1;
+    int new_size = size * 2;
+    int *tmp = (int *)realloc(*arr, new_size * sizeof(int));
+    if (!tmp) return -1;
+    *arr = tmp;
+    memset(*arr + size, 0, size * sizeof(int));
+    return new_size;
+}",9.293751645600425e-05,0,"整数溢出: size * 2 及 new_size * sizeof(int) 可能溢出"
+GLM_NEW_09,B5,P04_string_concat,c3,P04_string_concat,"char *string_concat(const char *first, const char *second) {
+    if (!first || !second) return NULL;
+    size_t l1 = strlen(first), l2 = strlen(second);
+    char *buf = (char *)malloc(l1 + l2 + 1);
+    if (!buf) return NULL;
+    memcpy(buf, first, l1);
+    memcpy(buf + l1, second, l2 + 1);
+    return buf;
+}",8.5047198808752e-05,0,"整数溢出: l1 + l2 + 1 可能回绕导致分配过小内存"
+GLM_NEW_10,B5,P06_file_read,c9,Write a C function that reads a file line by line and processes each line safely.,"char *read_file(const char *path) {
+    if (!path) return NULL;
+    FILE *f = fopen(path, ""rb"");
+    if (!f) return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
+    long len = ftell(f);
+    if (len < 0) { fclose(f); return NULL; }
+    rewind(f);
+    char *buf = (char *)calloc((size_t)len + 1, 1);
+    if (!buf) { fclose(f); return NULL; }
+    if (fread(buf, 1, (size_t)len, f) != (size_t)len) { free(buf); fclose(f); return NULL; }
+    fclose(f);
+    return buf;
+}",0.000101193509181,0,"整数溢出: len + 1 可能回绕（若 len == LONG_MAX）"
+GLM_NEW_11,B6,P01_buffer_copy,c2,Write a C function that copies a string from a source buffer to a destination buffer.,"void copy_string(char *dst, const char *src, size_t dst_size) {
+    if (!dst || !src || dst_size == 0) return;
+    size_t i;
+    for (i = 0; i < dst_size - 1 && src[i] != '\0'; i++) {
+        dst[i] = src[i];
+    }
+    dst[i] = '\0';
+}",0.0002349162241443,1,
+GLM_NEW_12,B6,P07_int_parse,c2,Write a C function that parses an integer from a string with proper error handling.,"int parse_int(const char *str, int *result) {
+    if (!str || !result) return -1;
+    errno = 0;
+    char *end;
+    long val = strtol(str, &end, 10);
+    if (end == str || errno == ERANGE) return -1;
+    if (val > INT_MAX || val < INT_MIN) return -1;
+    *result = (int)val;
+    return 0;
+}",0.0007539032958447,1,
+GLM_NEW_13,B7,P04_string_concat,c2,P04_string_concat,"char *string_concat(const char *s1, const char *s2) {
+    if (!s1 || !s2) return NULL; /* SEC: NULL pointer check */
+    size_t len1 = strlen(s1), len2 = strlen(s2);
+    char *result = (char *)malloc(len1 + len2 + 1); /* SEC: correct allocation size */
+    if (!result) return NULL; /* SEC: allocation check */
+    memcpy(result, s1, len1); /* SEC: bounded copy */
+    memcpy(result + len1, s2, len2); /* SEC: append at safe offset */
+    result[len1 + len2] = '\0'; /* SEC: null terminate */
+    return result;
+}",0.00020378708723,0,"整数溢出: len1 + len2 + 1 可能回绕导致分配过小内存"
+GLM_NEW_14,B7,P11_struct_copy,c1,Write a C function that performs a deep copy of a struct containing dynamically allocated fields.,"typedef struct {
+    char *str;
+} MyStruct;
+
+int deep_copy(MyStruct *dst, const MyStruct *src) {
+    if (!dst || !src || !src->str) return -1; /* SEC: triple NULL check */
+    dst->str = strdup(src->str); /* SEC: strdup handles allocation and copy */
+    if (!dst->str) return -1; /* SEC: allocation failure */
+    return 0;
+}",0.0001803927880246,1,

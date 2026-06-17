@@ -22,20 +22,19 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from sklearn.metrics import f1_score, precision_score, recall_score
 
 # 配置
 CONFIG = {
     # 模型
-    'model_name': r'E:\paper\new\model\codebert-base',
+    'model_name': r'/home2/zzl/model/codebert-base',
     'max_length': 512,
     'hidden_size': 768,
     'projection_dim': 256,
 
     # 训练
-    'batch_size': 16,
+    'batch_size': 24,
     'learning_rate': 2e-5,
-    'num_epochs': 10,
+    'num_epochs': 20,
     'warmup_ratio': 0.1,
     'weight_decay': 0.01,
 
@@ -43,8 +42,8 @@ CONFIG = {
     'temperature': 0.07,
 
     # 路径
-    'data_dir': r'E:\paper\new\SecureProtoCoT\data\processed',
-    'output_dir': r'E:\paper\new\SecureProtoCoT\outputs\models',
+    'data_dir': r'/home2/zzl/SecurePath/SecureProtoCoT/data/processed',
+    'output_dir': r'/home2/zzl/SecurePath/SecureProtoCoT/outputs/models',
 
     # 其他
     'random_seed': 42,
@@ -80,16 +79,7 @@ class ContrastiveEncoder(nn.Module):
 
         return projection
 
-
 class ContrastiveLoss(nn.Module):
-    """
-    对比学习损失函数：同类聚集，异类分离
-
-    输入：一个batch的嵌入和标签
-    - 同label的样本应该相似
-    - 不同label的样本应该不相似
-    """
-
     def __init__(self, temperature=0.07):
         super().__init__()
         self.temperature = temperature
@@ -97,7 +87,7 @@ class ContrastiveLoss(nn.Module):
     def forward(self, embeddings, labels):
         """
         Args:
-            embeddings: [batch_size, projection_dim]
+        embeddings: [batch_size, projection_dim]
             labels: [batch_size], 1=漏洞, 0=安全
         """
         batch_size = embeddings.size(0)
@@ -154,6 +144,7 @@ class CodeDataset(Dataset):
         }
 
 
+
 def load_data(data_dir, tokenizer, max_length, batch_size):
     """加载数据"""
     print("加载数据...")
@@ -208,14 +199,12 @@ def train_epoch(model, dataloader, optimizer, scheduler, loss_fn, device):
 
 
 def evaluate(model, data_dir, tokenizer, device, max_length=512):
-    """评估模型：计算漏洞检测准确率、F1、精确率、召回率"""
+    """评估模型：计算漏洞检测准确率"""
     model.eval()
 
     # 加载测试数据
     test_df = pd.read_csv(os.path.join(data_dir, 'test_contrastive.csv'))
     print(f"\n测试数据: {len(test_df)} 条")
-    print(f"  漏洞样本: {len(test_df[test_df['label'] == 1])}")
-    print(f"  安全样本: {len(test_df[test_df['label'] == 0])}")
 
     # 加载训练数据构建原型
     train_df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
@@ -254,8 +243,8 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
 
     # 测试
     print("评估测试集...")
-    preds = []
-    trues = []
+    correct = 0
+    total = 0
 
     with torch.no_grad():
         for idx, row in test_df.iterrows():
@@ -274,28 +263,67 @@ def evaluate(model, data_dir, tokenizer, device, max_length=512):
             # 预测：离哪个原型更近
             pred_label = 1 if vul_dist < safe_dist else 0
 
-            preds.append(pred_label)
-            trues.append(true_label)
+            if pred_label == true_label:
+                correct += 1
+            total += 1
 
-            if len(preds) % 100 == 0:
-                print(f"已处理 {len(preds)} 条")
+            if total % 100 == 0:
+                print(f"已处理 {total} 条, 当前准确率: {correct/total:.4f}")
 
-    # 计算指标
-    preds = np.array(preds)
-    trues = np.array(trues)
+    accuracy = correct / total
+    print(f"\n测试准确率: {accuracy:.4f}")
 
-    accuracy = (preds == trues).mean()
-    f1 = f1_score(trues, preds)
-    precision = precision_score(trues, preds)
-    recall = recall_score(trues, preds)
+    return accuracy
 
-    print(f"\n=== 评估结果 ===")
-    print(f"Accuracy:  {accuracy:.4f}")
-    print(f"F1 Score:  {f1:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall:    {recall:.4f}")
 
-    return accuracy, f1
+def build_and_save_prototypes(model, data_dir, tokenizer, device, output_dir, max_length=512):
+    """构建并保存原型向量"""
+    model.eval()
+
+    # 加载训练数据
+    train_df = pd.read_csv(os.path.join(data_dir, 'train_contrastive.csv'))
+
+    vul_embeds_list = []
+    safe_embeds_list = []
+
+    print("\n构建原型向量...")
+
+    with torch.no_grad():
+        # 编码所有漏洞代码
+        vul_df = train_df[train_df['label'] == 1]
+        print(f"  编码 {len(vul_df)} 个漏洞样本...")
+        for _, row in tqdm(vul_df.iterrows(), total=len(vul_df)):
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            vul_embeds_list.append(embed.cpu())
+
+        # 编码所有安全代码
+        safe_df = train_df[train_df['label'] == 0]
+        print(f"  编码 {len(safe_df)} 个安全样本...")
+        for _, row in tqdm(safe_df.iterrows(), total=len(safe_df)):
+            code = str(row['code'])
+            encoding = tokenizer(code, max_length=max_length,
+                                padding=True, truncation=True, return_tensors='pt')
+            embed = model(encoding['input_ids'].to(device),
+                         encoding['attention_mask'].to(device))
+            safe_embeds_list.append(embed.cpu())
+
+    # 计算原型（均值向量）
+    vul_prototype = torch.cat(vul_embeds_list, dim=0).mean(dim=0)  # [projection_dim]
+    safe_prototype = torch.cat(safe_embeds_list, dim=0).mean(dim=0)
+
+    print(f"  漏洞原型: {vul_prototype.shape}")
+    print(f"  安全原型: {safe_prototype.shape}")
+
+    # 保存原型
+    torch.save(vul_prototype, output_dir / 'vul_prototype.pt')
+    torch.save(safe_prototype, output_dir / 'safe_prototype.pt')
+    print(f"  保存原型到: {output_dir}")
+
+    return vul_prototype, safe_prototype
 
 
 def main():
@@ -351,7 +379,6 @@ def main():
 
     # 训练
     print(f"\n开始训练，共 {CONFIG['num_epochs']} 个epoch")
-    best_f1 = 0
     best_accuracy = 0
 
     for epoch in range(CONFIG['num_epochs']):
@@ -363,21 +390,25 @@ def main():
         print(f"平均损失: {avg_loss:.4f}")
 
         # 评估
-        accuracy, f1 = evaluate(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], CONFIG['max_length'])
+        accuracy = evaluate(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], CONFIG['max_length'])
 
-        # 保存最佳模型（基于 F1）
-        if f1 > best_f1:
-            best_f1 = f1
+        # 保存最佳模型
+        if accuracy > best_accuracy:
             best_accuracy = accuracy
-            model_path = output_dir / 'best_model'
+            model_path = output_dir / 'best_model0522'
             model.encoder.save_pretrained(model_path)
             tokenizer.save_pretrained(model_path)
-            print(f"保存最佳模型到: {model_path} (F1={f1:.4f})")
+            print(f"保存最佳模型到: {model_path}")
+
+    # 构建并保存原型
+    build_and_save_prototypes(model, CONFIG['data_dir'], tokenizer, CONFIG['device'], output_dir, CONFIG['max_length'])
 
     print("\n" + "=" * 60)
-    print(f"训练完成!")
-    print(f"最佳准确率: {best_accuracy:.4f}")
-    print(f"最佳 F1:    {best_f1:.4f}")
+    print(f"训练完成! 最佳准确率: {best_accuracy:.4f}")
+    print(f"输出文件:")
+    print(f"  - 编码器: {output_dir / 'best_model0522'}")
+    print(f"  - 漏洞原型: {output_dir / 'vul_prototype.pt'}")
+    print(f"  - 安全原型: {output_dir / 'safe_prototype.pt'}")
     print("=" * 60)
 
 

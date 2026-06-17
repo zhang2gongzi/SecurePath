@@ -1,0 +1,80 @@
+
+============================================================
+1. CODE SIZE DISTRIBUTION
+============================================================
+Group                         N   Tokens(mean)  Tokens(std)   Lines(mean)  Lines(std)
+--------------------------------------------------------------------------------
+BigVul Vul                10900          473.0        988.7          82.7       189.6
+BigVul Safe                5000           96.4        164.4          15.9        26.0
+LLM All                     320          124.6        112.1          16.3        17.4
+LLM Human-SAFE              213          128.8        119.1          17.2        17.8
+LLM Human-UNSAFE            107          116.1         96.0          14.5        16.4
+
+Key finding:
+  BigVul tokens CV (std/mean): vul=2.09, safe=1.71
+  LLM tokens CV: 0.90
+  → BigVul has MUCH higher variance in code length than LLM output
+
+============================================================
+2. COMMENT RATIO
+============================================================
+  BigVul Vul               : 0.049 (4.9%)
+  BigVul Safe              : 0.012 (1.2%)
+  LLM All                  : 0.086 (8.6%)
+  LLM Human-SAFE           : 0.104 (10.4%)
+  LLM Human-UNSAFE         : 0.049 (4.9%)
+
+Key finding:
+  BigVul vul comment ratio: 0.049
+  BigVul safe comment ratio: 0.012
+  LLM comment ratio: 0.086
+  → If BigVul safe code has more comments, classifier may learn 'comments = safe'
+
+============================================================
+3. DANGEROUS FUNCTION USAGE
+============================================================
+  BigVul Vul               : 0.78 calls/func, 0.4 unique types
+  BigVul Safe              : 0.05 calls/func, 0.0 unique types
+  LLM All                  : 2.07 calls/func, 1.5 unique types
+  LLM Human-SAFE           : 1.62 calls/func, 1.2 unique types
+  LLM Human-UNSAFE         : 2.94 calls/func, 2.1 unique types
+
+============================================================
+4. DANGEROUS FUNCTION CATEGORIES (% of code using)
+============================================================
+  unbounded_copy      : BigVul_vul=  2.6%  BigVul_safe=  0.1%  LLM=  1.6%
+  bounded_copy        : BigVul_vul= 14.1%  BigVul_safe=  0.9%  LLM= 26.9%
+  allocation          : BigVul_vul=  5.2%  BigVul_safe=  0.2%  LLM= 42.8%
+  deallocation        : BigVul_vul=  6.6%  BigVul_safe=  0.3%  LLM= 24.1%
+  string_dup          : BigVul_vul=  1.0%  BigVul_safe=  0.0%  LLM=  4.1%
+
+============================================================
+5. LLM CODE BY MODEL
+============================================================
+  LLM DeepSeek             : n=80, tokens=252±158, lines=37±24, cmt=0.200
+  LLM GLM                  : n=120, tokens=80±35, lines=9±3, cmt=0.046
+  LLM Sonnet               : n=120, tokens=84±32, lines=10±4, cmt=0.050
+
+============================================================
+6. ISR ITERATION EFFECTS ON CODE STRUCTURE
+============================================================
+
+  ISR-0:
+    Iter 0: tokens=828±853, p_vul=0.080070
+    Final:  tokens=828±853, p_vul=0.080070
+    Δ tokens: 0, Δ p_vul: 0.000000
+
+  ISR-1:
+    Iter 0: tokens=734±610, p_vul=0.075472
+    Final:  tokens=844±651, p_vul=0.199957
+    Δ tokens: 110, Δ p_vul: 0.124485
+
+  ISR-2:
+    Iter 0: tokens=590±373, p_vul=0.017593
+    Final:  tokens=996±960, p_vul=0.103534
+    Δ tokens: 406, Δ p_vul: 0.085941
+
+  ISR-3:
+    Iter 0: tokens=1306±906, p_vul=0.152309
+    Final:  tokens=896±781, p_vul=0.115363
+    Δ tokens: -410, Δ p_vul: -0.036946
