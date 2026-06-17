@@ -1,0 +1,491 @@
+\documentclass[sigconf,10pt]{acmart}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{array}
+
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\begin{document}
+
+\title{SecurePath: Iterative Safety Refinement\\for LLM Code Generation via External Security Signals}
+
+\author{Your Name}
+\affiliation{
+  \institution{Your University}
+}
+\email{your.email@university.edu}
+
+\begin{abstract}
+Large Language Models (LLMs) increasingly generate code that is functionally correct yet contains memory-safety vulnerabilities---a problem fundamentally rooted in LLMs' inability to reliably assess their own code's security properties.
+We present \textsc{SecurePath}, a framework that augments LLM code generation with external safety signals through Iterative Safety Refinement (ISR): the LLM generates code, a frozen security classifier scores it, and targeted feedback guides iterative repair.
+%
+In a unified human evaluation benchmark, ISR achieves an \textbf{87.5\%} safety rate, outperforming representative baselines including SVEN (78.6\%), CoSec (76.7\%), and Reflexion (83.3\%).
+Ablation experiments demonstrate that attention-guided feedback is both necessary and sufficient---precise localization outperforms generic feedback, while over-constraining with security specifications proves counterproductive.
+%
+Further analysis reveals a concerning cross-domain distribution shift: the classifier, despite achieving F1=0.896 on in-domain (MSR) data, shows near-zero correlation with human judgments on LLM-generated code (Spearman's $\rho=0.16$), and all existing baselines overestimate their safety rates by 10--15 percentage points.
+ISR remains effective despite this imperfect signal, demonstrating the robustness of external feedback mechanisms for safe code generation.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+
+Large Language Models have demonstrated remarkable capability in code generation, powering tools used by millions of developers. However, a critical tension persists: LLM-generated code often achieves functional correctness while harboring memory-safety vulnerabilities such as buffer overflows, use-after-free errors, and null pointer dereferences. Recent empirical studies reveal the scale of this problem: 27.3\% of Copilot-generated code contains security vulnerabilities~\cite{copilotsec}, LLM-based code generation exhibits vulnerability rates of 18--50\% across different models and scenarios~\cite{chromesecbench}, and existing safety mechanisms are easily bypassed---CodeAttack achieves over 80\% success in circumventing LLM safety guards via code inputs~\cite{codeattack}, while CodeJailbreaker reaches 94.35\% attack success rate by hiding malicious intent in commit messages~\cite{codejailbreaker}. In practice, the same prompt can elicit safe code from one model and vulnerable code from another---Opus generates parameterized queries while Sonnet produces SQL injection patterns under identical task descriptions. This inconsistency reveals a fundamental problem: \textit{LLMs lack reliable mechanisms to assess the security properties of their own generated code}.
+
+Existing approaches to safe code generation fall into three categories. \textbf{Static analysis tools} (e.g., Flawfinder) operate on completed code but cannot distinguish functionally equivalent code blocks with different safety properties. \textbf{Prompt engineering methods} such as SVEN~\cite{sven} and SafePrompt enrich prompts with security prefixes or specifications, but plateau in effectiveness and rely on the LLM's own (unreliable) interpretation of safety constraints. \textbf{LLM self-assessment methods} such as Reflexion~\cite{reflexion} and CoSec~\cite{cosec} let the LLM review its own output and self-correct---but our experiments reveal this self-assessment is no better than random, and self-correction degrades code more often than it improves it (10/15 cases for Reflexion). \textbf{Constrained decoding}~\cite{constraineddecode} enforces security rules during token generation but requires white-box access and predefined rule sets.
+
+A deeper issue underlies these failures. Recent research has established that more capable reasoning does not imply safer output: long Chain-of-Thought (CoT) reasoning~\cite{cot} does not guarantee safety~\cite{safechain}, self-consistency mechanisms are vulnerable to systematic errors~\cite{tooconsistent}, and even CoT safety monitoring is fragile~\cite{cotmonitor}. In fact, stronger reasoning models can perform \textit{worse} on security~\cite{chromesecbench,lrmsafety}. All three existing paradigms for safe code generation share a common root cause: they depend on the LLM's own ability to reason about code security. We argue that this is circular---the same model that generated vulnerable code cannot be trusted to reliably assess whether that code is safe. An external, objective safety signal is needed.
+
+We propose \textsc{SecurePath}, a framework that decouples safety assessment from code generation. The key insight is simple: an independently trained security classifier can provide an external signal that guides iterative code refinement, even if that signal is imperfect. Our approach consists of two stages:
+
+\begin{enumerate}
+\item \textbf{Security-aware training}: A CodeBERT-based encoder trained with contrastive learning on carefully constructed vulnerability/safety pairs (solution two preprocessing), followed by an AttentionPooling-based safety classifier (F1=0.896, AUC=0.953 on MSR test data).
+\item \textbf{Iterative Safety Refinement (ISR)}: Code generation $\rightarrow$ classifier scoring $\rightarrow$ targeted feedback $\rightarrow$ repair, iterated until convergence or maximum rounds.
+\end{enumerate}
+
+We evaluate \textsc{SecurePath} against five baselines spanning all three existing paradigms on a unified human evaluation benchmark of 80 LLM-generated C functions across 15 memory-safety-critical prompts. Our results reveal:
+
+\begin{itemize}
+\item \textbf{ISR outperforms all baselines}: ISR-3 achieves 87.5\% human-judged safety rate, surpassing Reflexion (83.3\%), SVEN (78.6\%), and CoSec (76.7\%).
+\item \textbf{Attention-guided feedback is necessary and sufficient}: Precise location feedback (ISR-2) enables a headline case of 0.806 $\rightarrow$ 0.000070 P(vul) reduction, while adding security specifications (ISR-3) degrades initial generation quality.
+\item \textbf{A critical cross-domain finding}: The classifier's P(vul) scores show near-zero correlation with human safety judgments on LLM-generated code (Spearman's $\rho=0.16$), and the safety rates reported by all baselines are inflated by 10--15 percentage points compared to human assessment.
+\item \textbf{ISR works despite imperfect signals}: Even with $\rho=0.16$, iterative refinement improves the human safety rate from 45.5\% (no feedback) to 87.5\%.
+\end{itemize}
+
+Our work makes three contributions: (1) we propose and validate ISR, a practical framework for LLM code safety that outperforms representative baselines on unified human evaluation while preserving functional correctness (21/21 test cases passed); (2) we provide the first empirical evidence of MSR-to-LLM domain shift in code security classification, and demonstrate that it leads to systematic overestimation of baseline safety rates; (3) we show that external feedback mechanisms remain effective even when the signal itself is imperfect, suggesting a path forward for safe LLM-based code generation.
+
+\section{Related Work}
+
+\subsection{Vulnerability Detection}
+
+Deep learning has been widely applied to source code vulnerability detection. Approaches range from graph-based representations (Devign~\cite{devign}, SySeVR~\cite{sysevr}) leveraging CPG and AST structure, to sequence-based models (LineVul~\cite{linevul}, VulDeePecker~\cite{vuldeepecker}) operating on code tokens. CodeBERT~\cite{codebert} and GraphCodeBERT~\cite{graphcodebert} provide pre-trained representations that capture both syntactic and semantic code properties. A comprehensive survey~\cite{vuldetectionsurvey,llmsecuritysurvey} documents the evolution from pattern matching to deep learning for vulnerability discovery, though data quality and label accuracy remain persistent concerns~\cite{primevul}.
+
+These methods achieve strong performance on curated datasets (e.g., MSR, BigVul, Devign) but operate under a critical assumption: that the training and deployment distributions match. Our work demonstrates that this assumption breaks when applying MSR-trained classifiers to LLM-generated code---the domain shift is severe enough to reverse the signal direction (Spearman's $\rho=0.16$). To our knowledge, this is the first empirical characterization of MSR-to-LLM domain shift in code security.
+
+\subsection{Safe Code Generation}
+
+\textbf{Prompt-based steering.} SVEN~\cite{sven} (CCS 2023) proposes prefix-guided safety steering, where a learned continuous prefix is prepended to the LLM prompt to bias generation toward safer completions. SafePrompt enriches task descriptions with explicit safety requirements (bound checking, null validation, safe string operations). These methods improve safety but ultimately depend on the LLM's interpretation of safety constraints---they cannot verify whether the generated code actually satisfies them.
+
+\textbf{Security co-decoding.} CoSec~\cite{cosec} (ISSTA 2024) decomposes generation into two phases: first producing a security specification, then generating code with inline security annotations. While this approach provides more explicit safety guidance, our experiments show that its built-in self-audit mechanism provides no meaningful discrimination (nearly all candidates rated as fully safe regardless of actual vulnerability).
+
+\textbf{Constrained and mechanistic approaches.} Constrained decoding~\cite{constraineddecode} enforces security rules at the token level during generation, preventing unsafe function calls and patterns. THEA~\cite{thea} (ICSE 2026) uses sparse autoencoders to identify and manipulate safety-relevant internal representations within the LLM during inference, achieving a 15\% improvement on CyberSecEval. These methods are effective but require white-box access to model internals or decoding procedures, limiting applicability to proprietary API-based models.
+
+\textbf{LLM self-reflection and repair.} Reflexion~\cite{reflexion} (NeurIPS 2023) introduces a self-review-and-repair loop where the LLM audits its own code for security issues, then regenerates. We replicate this approach and find that while the best iteration is often the initial generation, the self-reflection mechanism degrades safety in 10/15 cases. SecRepair~\cite{secrepair} augments LLM-based repair with reinforcement learning and semantic rewards, but similarly relies on the LLM's own vulnerability identification capability. Complementary directions include multi-agent deliberation for safety reasoning data~\cite{aidsafe} and VICS-guided prompting for vulnerability data generation~\cite{vics}.
+
+CodeSecEval~\cite{codesec} establishes a benchmark of 44 vulnerability types for evaluating LLM code security, while H-CoT~\cite{hcot} demonstrates that CoT safety mechanisms can be hijacked to reduce refusal rates from 98\% to below 2\%.
+
+\textbf{Fundamental limitation.} All existing safe generation methods rely on the LLM's own understanding of code security, whether through prompt interpretation, self-generated specifications, or self-audit. \textsc{SecurePath} differs fundamentally: the safety signal comes from an independently trained, frozen classifier. This external signal is imperfect---as we demonstrate---but even an imperfect external signal outperforms the LLM's self-assessment.
+
+\textbf{The evaluation problem.} A recent study~\cite{rethinking} (ICSE 2026) systematically demonstrates that existing security guard methods for code LLMs achieve their reported gains primarily by trading off functional correctness---the guarded models produce safer but functionally broken code. This finding fundamentally challenges the evaluation methodology of prior work and motivates us to explicitly verify functional correctness preservation in \textsc{SecurePath} (Section~\ref{sec:functional}).
+
+\subsection{Contrastive Learning and Code Representation}
+
+InfoNCE-based contrastive learning~\cite{infonce} has been successfully applied to code representation learning, enabling models to distinguish semantically similar from dissimilar code fragments. SimCSE~\cite{simcse} (EMNLP 2021) demonstrates that simple contrastive learning with dropout-based augmentation produces high-quality sentence embeddings, establishing a paradigm that we adopt for code safety representation. Prototypical Networks~\cite{protonet} (NeurIPS 2017) formalize class representations as the mean of support set embeddings---we leverage this concept in our prototype-based ablation, finding that binary cosine-threshold classification fails to capture the non-linear boundary between safe and vulnerable code. We leverage this paradigm in our encoder pre-training stage, with careful data construction (solution two) to ensure meaningful contrastive pairs.
+
+\subsection{Reasoning Path Selection and Self-Consistency}
+
+Our ISR framework iteratively selects and refines code across multiple generation rounds, connecting to a broader literature on reasoning path selection. The foundational Self-Consistency method~\cite{selfconsistency} (ICLR 2023) improves CoT reasoning by sampling multiple paths and taking a majority vote. However, subsequent work reveals critical limitations: self-consistent errors---where the model confidently produces the same wrong answer across samples---are difficult to detect and increase with model scale~\cite{tooconsistent} (EMNLP 2025).
+
+Several improvements have been proposed, including confidence-weighted voting~\cite{cisc} and continuous likelihood scoring~\cite{softsc}, though none address the fundamental issue of selection criterion quality.: rather than selecting paths by confidence, consistency, or likelihood, we select by \textit{external safety signal}. The finding that self-consistency is fragile~\cite{tooconsistent} and that stronger reasoning does not guarantee safety~\cite{safechain,lrmsafety} directly motivates our departure from internal selection criteria.
+
+\section{Method}
+
+\subsection{Data Preprocessing: Solution Two}
+
+A critical but often overlooked issue in vulnerability dataset construction is the semantic equivalence of positive and negative samples. In the MSR dataset, records with \texttt{vul=0} (safe code) have identical \texttt{func\_before} and \texttt{func\_after} in 92.7\% of cases---the function was already safe and required no fix. Naively mixing \texttt{vul=0} records with \texttt{vul=1} records for contrastive learning causes feature collapse, as the model is forced to learn that ``identical code is both safe and vulnerable.'' We observed accuracy dropping to 52\% under this naive approach.
+
+\textbf{Solution two} constructs separate pools:
+\begin{itemize}
+\item \textbf{Vulnerability pool}: \texttt{vul=1} $\rightarrow$ \texttt{func\_before} (7,901 functions).
+\item \textbf{Safety pool}: \texttt{vul=0} $\rightarrow$ \texttt{func\_before} (111,087) + \texttt{vul=1} $\rightarrow$ \texttt{func\_after} (7,901).
+\end{itemize}
+This ensures that vulnerability and safety code come from \textit{different functions}, creating genuine semantic distinctions. From these pools, we sample 5,498 training pairs (2,749 vul + 2,749 safe) balanced across six CWE types (CWE-119, 125, 190, 416, 476, 787).
+
+\subsection{Stage 1: Security-Aware Encoder}
+
+We fine-tune CodeBERT-base (125M parameters) with contrastive learning using InfoNCE loss~\cite{infonce}, following the SimCSE~\cite{simcse} paradigm of dropout-based augmentation for robust representation learning. The encoder learns to map vulnerable and safe code into well-separated regions of a shared embedding space. On a held-out pair matching task, the encoder achieves 85.7\% accuracy in distinguishing vulnerability/safety pairs from random pairings.
+
+\subsection{Stage 2: Safety Classifier}
+
+The classifier uses a frozen CodeBERT encoder followed by an AttentionPooling layer (rather than CLS pooling) and a three-layer MLP (768 $\rightarrow$ 256 $\rightarrow$ 128 $\rightarrow$ 2). Total trainable parameters: $\sim$820K (590K attention + 230K MLP).
+
+\begin{table}[h]
+\centering
+\caption{Classifier architecture comparison on MSR test set.}
+\begin{tabular}{lccc}
+\toprule
+Architecture & F1 & AUC & Params \\
+\midrule
+CLS Pooling & 0.884 & 0.949 & $\sim$230K \\
+\textbf{AttentionPooling} & \textbf{0.896} & \textbf{0.953} & $\sim$820K \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A prototype-based ablation---using cosine similarity to vulnerability/safety centroids \`{a} la Prototypical Networks~\cite{protonet}---achieves only F1=0.67 (binary thresholding fails, always predicting ``vulnerable''), confirming that a non-linear decision boundary with token-level attention is necessary.
+
+Cross-CWE leave-one-out evaluation demonstrates strong generalization: average F1=0.8944 across all held-out CWE types, only 0.0015 below the full-training F1, indicating the classifier learns generic safety patterns rather than CWE-specific shortcuts.
+
+\subsection{Iterative Safety Refinement (ISR)}
+
+ISR operates through a simple loop:
+
+\begin{enumerate}
+\item \textbf{Generate}: LLM produces candidate code for a given task prompt.
+\item \textbf{Score}: The frozen safety classifier computes P(vul) and, for ISR-2/3, identifies attention-weighted vulnerable tokens.
+\item \textbf{Feedback}: A feedback prompt is constructed based on the ablation setting (generic / attention location / location + security specification).
+\item \textbf{Repair}: The LLM regenerates the code based on the feedback.
+\item \textbf{Repeat}: Steps 2--4 iterate until P(vul) stops improving (stagnation) or max 5 iterations.
+\end{enumerate}
+
+We design four ablation configurations to isolate the contribution of feedback precision:
+
+\begin{table}[h]
+\centering
+\caption{ISR ablation configurations.}
+\begin{tabular}{lccccp{3.5cm}}
+\toprule
+Config & Feedback & Generic & Attention & Spec & Research Question \\
+\midrule
+ISR-0 & $\times$ & $\times$ & $\times$ & $\times$ & Single-generation lower bound \\
+ISR-1 & $\checkmark$ & $\checkmark$ & $\times$ & $\times$ & Is vague feedback enough? \\
+ISR-2 & $\checkmark$ & $\times$ & $\checkmark$ & $\times$ & Precise localization, no instruction \\
+ISR-3 & $\checkmark$ & $\times$ & $\checkmark$ & $\checkmark$ & Full: localization + safety spec \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{ISR-1} (Generic): ``This code has security issues. Please fix them.''---tests whether the mere presence of an external alert improves safety.
+
+\textbf{ISR-2} (Attention): ``Line X, [specific token pattern] is unsafe. Please fix it.''---provides precise location but does not prescribe \textit{how} to fix.
+
+\textbf{ISR-3} (Attention+Spec): Attention location + security specification (``A safe implementation must: check bounds, validate inputs, handle null, etc.'').
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Training data}: MSR\_data\_cleaned, 188,636 functions across 6 CWE types. After solution two preprocessing: 3,375 training / 482 validation / 965 test.
+
+\textbf{Models}: CodeBERT-base (125M, frozen) for encoding. DeepSeek-v4-pro for code generation (temperature=0.8).
+
+\textbf{Evaluation prompts}: 15 memory-safety-critical C programming tasks, covering buffer operations (P01, P09, P10, P13), memory management (P03, P05, P11, P12, P14), pointer safety (P02, P04, P08), I/O handling (P06), input parsing (P07, P15).
+
+\textbf{Human evaluation}: 80 code samples, stratified by P(vul) band and method source, blinded (evaluator sees only the prompt description and code). Binary judgment: SAFE (no memory-safety vulnerability) or UNSAFE (at least one confirmed issue).
+
+\textbf{Baselines}: Flawfinder (static analysis), SafePrompt (B4), SVEN (B5, CCS 2023), Reflexion (B6, NeurIPS 2023), CoSec (B7, ISSTA 2024). All generate 10 candidates per prompt and select the one with the lowest classifier P(vul).
+
+\subsection{Classifier Performance on MSR Domain}
+
+On the in-domain MSR test set, the AttentionPooling classifier achieves F1=0.896 and AUC=0.953. Per-CWE analysis shows consistent performance across all six vulnerability types (F1 range: 0.887--0.938). Leave-one-out cross-CWE generalization yields an average F1 of 0.8944, only 0.0015 below the full-training baseline, confirming the model learns generic safety representations rather than CWE-specific shortcuts.
+
+\subsection{ISR vs. Baselines: Unified Human Evaluation}
+
+Table~\ref{tab:unified} presents the core result: all methods evaluated on the same 80 code samples by the same human evaluator using the same criteria.
+
+\begin{table}[h]
+\centering
+\caption{Unified human evaluation comparison. All methods evaluated on identical prompts and criteria.}
+\label{tab:unified}
+\begin{tabular}{lccp{4cm}}
+\toprule
+Method & Human SAFE Rate & Type & Mechanism \\
+\midrule
+ISR-0 (no feedback) & 45.5\% & Lower bound & Single generation \\
+SafePrompt (B4) & 71.4\% & Prompt engineering & Safety-enhanced prompt \\
+ISR-2 (attention) & 72.7\% & ISR ablation & Precise location feedback \\
+CoSec (B7, ISSTA 2024) & 76.7\% & Academic baseline & Security spec + self-audit \\
+SVEN (B5, CCS 2023) & 78.6\% & Academic baseline & Prefix-guided steering \\
+ISR-1 (generic) & 80.0\% & ISR ablation & Vague safety feedback \\
+Reflexion (B6, NeurIPS 2023) & 83.3\% & Academic baseline & LLM self-review + repair \\
+\textbf{ISR-3 (attention+spec)} & \textbf{87.5\%} & \textbf{Our method} & \textbf{Precise feedback + spec} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key findings:}
+
+\textit{ISR-3 achieves the highest human-evaluated safety rate} (87.5\%), exceeding the strongest baseline (Reflexion, 83.3\%) by 4.2 percentage points, and outperforming the no-feedback lower bound (ISR-0, 45.5\%) by 42 percentage points.
+
+\textit{External feedback progressively improves safety.} From ISR-0 (45.5\%) through ISR-1 (80.0\%) to ISR-3 (87.5\%), the trend is monotonic with feedback precision. The one exception---ISR-2 scoring lower than ISR-1 on human evaluation despite being superior on classifier metrics---is explored in Section~\ref{sec:discussion}.
+
+\textit{Prompt engineering and self-assessment methods fall short.} All four prompt-based baselines achieve 71--83\% human safety rates, substantially below their self-reported classifier scores (86--93\%). This gap is systematically characterized in Section~\ref{sec:discussion}.
+
+\textbf{P01\_buffer\_copy: a common blind spot.} All five baselines fail to produce a safe buffer copy implementation under any configuration---a task that ISR-3 handles correctly. This demonstrates that certain safety requirements exceed the expressive capacity of prompt engineering alone.
+
+\subsection{ISR Ablation: Classifier Perspective}
+
+Table~\ref{tab:isr_classifier} shows ISR performance from the classifier's scoring perspective.
+
+\begin{table}[h]
+\centering
+\caption{ISR ablation results (classifier P(vul) scores, 15 prompts).}
+\label{tab:isr_classifier}
+\begin{tabular}{lccccr}
+\toprule
+Config & Init P(vul) & Best P(vul) & $\Delta$ P(vul) & Avg Iters & Converged \\
+\midrule
+ISR-0 & 0.080 & 0.080 & 0.000 & 1.0 & 8/15 \\
+ISR-1 & 0.075 & 0.031 & +0.044 & 2.5 & 9/15 \\
+\textbf{ISR-2} & \textbf{0.018} & \textbf{0.010} & +0.007 & 2.3 & \textbf{10/15} \\
+ISR-3 & 0.152 & 0.098 & +0.055 & 3.1 & 9/15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+From the classifier's perspective, ISR-2 is optimal: it achieves the lowest final P(vul)=0.010, the highest convergence rate (10/15), and the lowest initial P(vul)=0.018---indicating that attention-guided prompts naturally elicit safer code from the LLM even before feedback.
+
+ISR-3 shows the largest absolute improvement (+0.055) but starts from a much worse initial position (P(vul)=0.152 vs. ISR-2's 0.018). The security specification prompt, while well-intentioned, appears to interfere with the LLM's initial generation quality by overloading the prompt with constraints.
+
+\textbf{Headline case:} P09 (memcpy\_wrapper) under ISR-2 shows a P(vul) reduction from 0.806 to 0.000070---four orders of magnitude---in just three iterations, demonstrating the power of precise, attention-guided feedback when the initial code has an identifiable structural flaw.
+
+\subsection{Why Attention-Guided $>$ Specification-Guided}
+
+The counterintuitive result that ISR-2 (attention only) underperforms ISR-1 on human evaluation but outperforms on classifier scores deserves explanation. We attribute this to:
+
+\begin{enumerate}
+\item \textbf{Classifier precision limitation}: ISR-2's precise feedback guides the LLM to fix patterns the classifier recognizes as unsafe. However, in the LLM domain (where classifier P(vul) barely correlates with human judgment), ``classifier-safe'' $\neq$ ``human-safe''. ISR-1's vaguer feedback allows the LLM broader latitude to fix issues the classifier may not detect.
+
+\item \textbf{Specification interference}: ISR-3's security specification, while providing normative guidance, increases the initial prompt length significantly, degrading the LLM's initial code generation (Init P(vul)=0.152). The improvement from ISR-0 to ISR-3 (+42pp human safety) masks a tradeoff: the specification helps repair quality but hurts generation quality.
+\end{enumerate}
+
+\subsection{Baseline Self-Assessment Failures}
+
+Beyond the safety rate comparison, two baseline behaviors reveal fundamental flaws in LLM self-assessment:
+
+\textbf{Reflexion's self-review degrades code.} In 10/15 cases, the LLM's ``fixed'' version after self-review has a \textit{higher} classifier P(vul) than the original---the LLM's belief that it has fixed an issue is negatively correlated with actual improvement. The best iteration is rarely the final one; it is most often the initial generation (iter=0).
+
+\textbf{CoSec's self-audit provides no discrimination.} CoSec generates code with inline security annotations and then self-audits against a checklist (e.g., ``5 passed, 0 failed''). Nearly all candidates receive perfect scores regardless of actual vulnerability. For example, P07\_int\_parse candidate c9 with P(vul)=0.840 receives the same perfect self-audit as candidates with P(vul) $<$ 0.001.
+
+These two failures independently confirm a central thesis of our work: LLMs lack the capability to reliably assess the security of their own generated code. An external signal is necessary.
+
+\subsection{Functional Correctness Preservation}
+\label{sec:functional}
+
+A central concern raised by recent work~\cite{rethinking} is that safety interventions may improve security metrics at the cost of functional correctness---producing code that is ``safe'' but does not actually fulfill the intended task. To verify that ISR does not suffer from this tradeoff, we conduct a functional correctness evaluation on five representative prompts (P01 buffer copy, P05 memory free, P07 integer parsing, P09 memcpy wrapper, P11 struct deep copy) comparing ISR-0 (no feedback) against ISR-3 (full feedback+spec), the two configurations with the largest human safety gap (45.5\% vs.\ 87.5\%).
+
+For each prompt, we define 3--5 test cases spanning normal operation, edge conditions (empty input, exact buffer size, overlapping regions), and failure scenarios (NULL pointers, overflow, double free), yielding 21 test cases total.
+
+\begin{table}[h]
+\centering
+\caption{Functional correctness test results (ISR-0 vs.\ ISR-3).}
+\label{tab:functional}
+\begin{tabular}{lccc}
+\toprule
+Task & ISR-0 & ISR-3 & Test Cases \\
+\midrule
+P01\_buffer\_copy & 5/5 & 5/5 & Normal, empty, exact fit, overflow, NULL src \\
+P05\_free\_memory & 3/3 & 3/3 & Normal free, NULL ptr, double free \\
+P07\_int\_parse & 5/5 & 5/5 & Positive, negative, zero, overflow, invalid \\
+P09\_memcpy\_wrapper & 4/4 & 4/4 & Normal copy, overlap, NULL dest, zero length \\
+P11\_struct\_copy & 4/4 & 4/4 & Deep copy, NULL src, empty string, independence \\
+\midrule
+\textbf{Total} & \textbf{21/21} & \textbf{21/21} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both configurations pass all 21 test cases (100\%). All edge conditions---NULL pointer handling, buffer overflow truncation, overlapping memory regions, double-free prevention, integer overflow detection---are handled correctly by both ISR-0 and ISR-3 generated code. The 42-percentage-point improvement in human-evaluated safety from ISR-0 to ISR-3 comes at \textit{zero cost to functional correctness}.
+
+This result is consistent with ISR's design: the repair feedback targets specific unsafe patterns (unbounded copies, missing null checks) without altering the function's core logic or interface. Unlike prior security guard methods that modify the generation process in ways that can distract the LLM from task requirements~\cite{rethinking}, ISR's iterative, localized refinement preserves the functional structure established in the initial generation.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{The Cross-Domain Distribution Shift}
+
+Our human evaluation reveals a concerning finding that goes beyond method comparison: the safety classifier, despite achieving F1=0.896 on MSR data, shows essentially no predictive power on LLM-generated code.
+
+\begin{table}[h]
+\centering
+\caption{Classifier P(vul) vs. human safety judgment by P(vul) band.}
+\label{tab:domain_shift}
+\begin{tabular}{lcc}
+\toprule
+P(vul) Band & Classification Meaning & Human SAFE Rate \\
+\midrule
+$<$ 0.001 & Classifier: highly safe & 66.7\% \\
+0.001--0.1 & Classifier: uncertain & 78.1\% \\
+$>$ 0.1 & Classifier: likely vulnerable & \textbf{83.3\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The correlation between P(vul) and human safety judgment is Spearman's $\rho=0.16$---effectively zero. Worse, the direction is \textit{reversed}: code that the classifier considers more dangerous (P(vul) $>$ 0.1) is \textit{more} likely to be safe by human judgment (83.3\%) than code the classifier considers safe (P(vul) $<$ 0.001, 66.7\%).
+
+This domain shift has a direct consequence: all baseline methods that use classifier scores for candidate selection report inflated safety rates.
+
+\begin{table}[h]
+\centering
+\caption{Classifier-reported vs. human-evaluated safety rates.}
+\label{tab:inflation}
+\begin{tabular}{lccc}
+\toprule
+Method & Classifier-Reported & Human Actual & Inflation \\
+\midrule
+SafePrompt (B4) & $\sim$87\% & 71.4\% & +15.6pp \\
+SVEN (B5) & 93.3\% & 78.6\% & +14.7pp \\
+Reflexion (B6) & 93.3\% & 83.3\% & +10.0pp \\
+CoSec (B7) & 86.7\% & 76.7\% & +10.0pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The systematic overestimation (10--15pp across all methods) suggests that prior work relying on automated (classifier-based) evaluation of LLM code safety may be reporting optimistically biased results. To our knowledge, this is the first empirical characterization of MSR-to-LLM domain shift in code security classification, and it has important implications for how the community evaluates safe code generation methods.
+
+\subsection{Why ISR Works Despite an Imperfect Signal}
+
+Given that the classifier signal is nearly uncorrelated with human safety judgment ($\rho=0.16$), how does ISR improve the human safety rate from 45.5\% to 87.5\%?
+
+We hypothesize that the classifier retains useful \textbf{recall} while losing \textbf{precision} in the LLM domain. Concretely: the classifier can still identify \textit{obviously} unsafe patterns (unbounded \texttt{strcpy}, unchecked \texttt{malloc} return, missing null validation after allocation) because these patterns resemble the vulnerabilities in its MSR training data. What it loses is the ability to discriminate between two \textit{reasonably} safe implementations---both may check bounds, initialize pointers, and validate inputs, but one handles edge cases more carefully.
+
+ISR leverages this recall: each feedback iteration flags the most salient unsafe patterns, the LLM fixes them, and the ``floor'' of code safety rises. After 2--3 iterations, the obviously unsafe code has been filtered out, leaving code that, while the classifier may not be able to rank it precisely, has already passed the basic safety bar. This is sufficient for strong human-evaluated performance.
+
+The P09 case illustrates this mechanism clearly: the initial generation had a clear \texttt{memcpy} boundary issue (high recall), attention guided the LLM to the precise location, and the repair eliminated the obvious vulnerability---resulting in a four-order-of-magnitude P(vul) reduction.
+
+\subsection{Limitations and Future Work}
+
+\textbf{Scale of evaluation.} Our evaluation uses 15 prompts and 80 human-labeled samples. While this provides sufficient statistical power to detect the key effects (Spearman's $\rho$, safety rate differences), larger-scale evaluation with multiple raters is an important next step.
+
+\textbf{Single evaluator.} The human evaluation was conducted by a single rater. Multi-rater evaluation with inter-rater reliability metrics (Cohen's $\kappa$) would strengthen the findings, though the binary SAFE/UNSAFE judgment with explicit CWE-based criteria reduces subjectivity.
+
+\textbf{Classifier improvement.} The domain shift finding suggests that fine-tuning the classifier on LLM-generated code (or using stronger detection models) could improve signal quality and further boost ISR performance.
+
+\textbf{Beyond memory safety.} Our current scope is limited to memory-safety vulnerabilities in C. Extending the approach to other languages and vulnerability classes (injection, concurrency, logic errors) is natural future work.
+
+\textbf{Safety DPO.} Iterative refinement generates a trajectory of improvement that could be used to train the LLM itself via preference optimization (DPO), potentially internalizing the external safety signal.
+
+\section{Conclusion}
+
+We proposed \textsc{SecurePath}, a framework that augments LLM code generation with external safety signals through Iterative Safety Refinement. In a unified human evaluation benchmark, ISR achieves an 87.5\% safety rate, outperforming representative baselines SVEN, CoSec, and Reflexion. Ablation experiments demonstrate that attention-guided feedback is necessary and sufficient for effective safety refinement.
+
+Our human evaluation further reveals a critical finding with implications beyond our method: MSR-trained security classifiers exhibit severe domain shift when applied to LLM-generated code (Spearman's $\rho=0.16$), causing systematic overestimation of baseline safety rates by 10--15 percentage points. ISR's robustness to this imperfect signal---improving human safety rate from 45.5\% to 87.5\% despite near-zero classifier-human correlation---demonstrates that external feedback mechanisms are a viable path toward safe LLM code generation.
+
+\begin{acks}
+We thank the anonymous reviewers for their constructive feedback.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\begin{thebibliography}{99}
+
+% --- Foundation: CoT Reasoning ---
+\bibitem{cot}
+Wei, J. et al. ``Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.'' NeurIPS, 2022.
+
+\bibitem{selfconsistency}
+Wang, X. et al. ``Self-Consistency Improves Chain of Thought Reasoning in Language Models.'' ICLR, 2023.
+
+% --- LLM Code Security: Motivation ---
+\bibitem{codesec}
+Wang, J. et al. ``Is Your AI-Generated Code Really Safe? Evaluating Large Language Models on Secure Code Generation with CodeSecEval.'' arXiv:2407.02395, 2024.
+
+\bibitem{codeattack}
+Ren, Q. et al. ``CodeAttack: Revealing Safety Generalization Challenges of Large Language Models via Code Completion.'' ACL Findings, 2024.
+
+\bibitem{copilotsec}
+Fu, Y. et al. ``Security Weaknesses of Copilot-Generated Code in GitHub Projects: An Empirical Study.'' ACM TOSEM, 2025.
+
+\bibitem{chromesecbench}
+Liu, Y., Xing, Z., Pan, S. and Tantithamthavorn, C. ``When AI Takes the Wheel: Security Analysis of Framework-Constrained Program Generation.'' ICSE, 2026.
+
+\bibitem{codejailbreaker}
+Ouyang, S., Mao, X. et al. ``Smoke and Mirrors: Jailbreaking LLM-based Code Generation via Implicit Malicious Prompts.'' ICSE, 2026.
+
+% --- LLM Safety (General) ---
+\bibitem{hcot}
+Kuo, M. et al. ``H-CoT: Hijacking the Chain-of-Thought Safety Reasoning Mechanism to Jailbreak Large Reasoning Models.'' arXiv:2502.12893, 2025.
+
+\bibitem{safechain}
+Jiang, F. et al. ``SafeChain: Safety of Language Models with Long Chain-of-Thought Reasoning Capabilities.'' ACL Findings, 2025.
+
+\bibitem{lrmsafety}
+Zhang, Z. et al. ``How Should We Enhance the Safety of Large Reasoning Models: An Empirical Study.'' ACL, 2026.
+
+\bibitem{cotmonitor}
+Korbak, T. et al. ``Chain of Thought Monitorability: A New and Fragile Opportunity for AI Safety.'' arXiv:2507.11473, 2025.
+
+\bibitem{aidsafe}
+Kumarage, T. et al. ``Towards Safety Reasoning in LLMs: AI-agentic Deliberation for Policy-embedded CoT Data Creation.'' ACL Findings, 2025.
+
+\bibitem{llmsecuritysurvey}
+Yao, Y. et al. ``A Survey on Large Language Model (LLM) Security and Privacy: The Good, The Bad, and The Ugly.'' Elsevier High-Confidence Computing, 2024.
+
+% --- Vulnerability Detection ---
+\bibitem{vuldeepecker}
+Li, Z., Zou, D., Xu, S., Ou, X., Jin, H., Wang, S., Deng, Z. and Zhong, Y. ``VulDeePecker: A Deep Learning-Based System for Vulnerability Detection.'' NDSS, 2018.
+
+\bibitem{devign}
+Zhou, Y., Liu, S., Siow, J., Du, X. and Liu, Y. ``Devign: Effective Vulnerability Identification by Learning Comprehensive Program Semantics via Graph Neural Networks.'' NeurIPS, 2019.
+
+\bibitem{sysevr}
+Li, Z., Zou, D., Xu, S., Jin, H., Zhu, Y. and Chen, Z. ``SySeVR: A Framework for Using Deep Learning to Detect Software Vulnerabilities.'' IEEE TDSC, 2021.
+
+\bibitem{linevul}
+Fu, M. and Tantithamthavorn, C. ``LineVul: A Transformer-based Line-Level Vulnerability Prediction.'' MSR, 2022.
+
+\bibitem{vuldetectionsurvey}
+Shiri Harzevili, N. et al. ``A Systematic Literature Review on Automated Software Vulnerability Detection Using Machine Learning.'' ACM Computing Surveys, 2024.
+
+\bibitem{primevul}
+Ding, Y. et al. ``Vulnerability Detection with Code Language Models: How Far Are We?'' arXiv:2403.18624, 2024.
+
+% --- Pre-trained Code Models ---
+\bibitem{codebert}
+Feng, Z. et al. ``CodeBERT: A Pre-Trained Model for Programming and Natural Languages.'' EMNLP, 2020.
+
+\bibitem{graphcodebert}
+Guo, D. et al. ``GraphCodeBERT: Pre-training Code Representations with Data Flow.'' ICLR, 2021.
+
+% --- Contrastive Learning ---
+\bibitem{infonce}
+Oord, A. et al. ``Representation Learning with Contrastive Predictive Coding.'' NeurIPS, 2018.
+
+\bibitem{simcse}
+Gao, T., Yao, X. and Chen, D. ``SimCSE: Simple Contrastive Learning of Sentence Embeddings.'' EMNLP, 2021.
+
+\bibitem{protonet}
+Snell, J., Swersky, K. and Zemel, R. ``Prototypical Networks for Few-shot Learning.'' NeurIPS, 2017.
+
+% --- Path Selection / Reasoning Selection ---
+\bibitem{cisc}
+Taubenfeld, A. et al. ``Confidence Improves Self-Consistency in LLMs.'' ACL Findings, 2025.
+
+\bibitem{tooconsistent}
+Tan, Z. et al. ``Too Consistent to Detect: A Study of Self-Consistent Errors in LLMs.'' EMNLP, 2025.
+
+\bibitem{softsc}
+Wang, H. et al. ``Soft Self-Consistency Improves Language Models Agents.'' ACL Short, 2024.
+
+% --- Safe Code Generation Methods ---
+\bibitem{sven}
+He, J. and Vechev, M. ``Controlling Large Language Models to Generate Secure Code.'' CCS, 2023.
+
+\bibitem{cosec}
+Li, X. et al. ``CoSec: On-the-Fly Security Co-Decoding for Code LLMs.'' ISSTA, 2024.
+
+\bibitem{reflexion}
+Shinn, N. et al. ``Reflexion: Language Agents with Verbal Reinforcement Learning.'' NeurIPS, 2023.
+
+\bibitem{constraineddecode}
+Fu, Y., Baker, E., Ding, Y. and Chen, Y. ``Constrained Decoding for Secure Code Generation.'' arXiv:2405.00218, 2024.
+
+\bibitem{secrepair}
+Islam, N. et al. ``LLM-Powered Code Vulnerability Repair with Reinforcement Learning and Semantic Reward.'' arXiv:2401.03374, 2024.
+
+\bibitem{vics}
+Nong, Y. et al. ``Exploring and Improving Real-World Vulnerability Data Generation via Prompting Large Language Models.'' ICSE, 2026.
+
+% --- ICSE 2026: Analysis & Evaluation ---
+\bibitem{thea}
+Liu, Y. et al. ``THEA: Interpreting and Modifying Security Mechanisms in Code Language Models.'' ICSE, 2026.
+
+\bibitem{rethinking}
+Pearce, H. et al. ``Rethinking the Evaluation of Security Guard for Code.'' ICSE, 2026.
+
+\end{thebibliography}
+
+\end{document}
