@@ -51,7 +51,6 @@ SecureProtoCoT/data/processed/train_leave_one.csv
 SecureProtoCoT/data/processed/test_ratio.csv
 SecureProtoCoT/data/processed/test_leave_one.csv
 SecureProtoCoT/data/processed/val_ratio.csv
-SecureProtoCoT/data/processed/train_contrastive.csv
 
 # 保留统计数据（小文件）
 # cwe_stats.json 可以上传
@@ -62,7 +61,6 @@ SecureProtoCoT/data/processed/train_contrastive.csv
 *.pth
 *.model
 outputs/models/
-model/
 
 # Logs
 *.log
@@ -75,3 +73,6 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# 忽略训练输出和模型权重
+SecureProtoCoT/outputs/models/
