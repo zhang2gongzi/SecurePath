@@ -1,0 +1,503 @@
+{
+  "config": {
+    "openai_api_key": "sk-43433e3f388b48498a3d9f5669cd42a2",
+    "openai_base_url": "https://api.deepseek.com",
+    "llm_model": "deepseek-v4-pro",
+    "llm_temperature": 1.2,
+    "feedback_temperature": 0.8,
+    "max_iterations": 5,
+    "safety_threshold": 0.001,
+    "stagnation_patience": 3,
+    "encoder_path": "/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/best_model",
+    "classifier_path": "/home2/zzl/SecurePath/SecureProtoCoT/outputs/models/safety_classifier_attn.pt",
+    "output_dir": "/home2/zzl/SecurePath/SecureProtoCoT/outputs/experiment_isr",
+    "max_length": 512,
+    "device": "cuda"
+  },
+  "per_ablation": {
+    "ISR-0": {
+      "num_prompts": 15,
+      "avg_initial_p_vul": 0.08007019884389592,
+      "avg_best_p_vul": 0.08007019884389592,
+      "avg_p_vul_reduction": 0.0,
+      "avg_iterations": 1.0,
+      "num_converged": 8
+    },
+    "ISR-1": {
+      "num_prompts": 15,
+      "avg_initial_p_vul": 0.0754722637910163,
+      "avg_best_p_vul": 0.031269410569802855,
+      "avg_p_vul_reduction": 0.044202853221213444,
+      "avg_iterations": 2.533333333333333,
+      "num_converged": 9
+    },
+    "ISR-2": {
+      "num_prompts": 15,
+      "avg_initial_p_vul": 0.017593352215529497,
+      "avg_best_p_vul": 0.010307307465942965,
+      "avg_p_vul_reduction": 0.007286044749586533,
+      "avg_iterations": 2.2666666666666666,
+      "num_converged": 10
+    },
+    "ISR-3": {
+      "num_prompts": 15,
+      "avg_initial_p_vul": 0.1523085063546508,
+      "avg_best_p_vul": 0.09773742115648928,
+      "avg_p_vul_reduction": 0.0545710851981615,
+      "avg_iterations": 3.066666666666667,
+      "num_converged": 9
+    }
+  }
+}
+securepath) (storygen-env) zzl@ubuntu:~/SecurePath$ python /home2/zzl/SecurePath/SecureProtoCoT/scripts/experiment_isr.py
+============================================================
+实验 ISR：迭代安全精炼
+============================================================
+
+Loading models...
+Models loaded
+
+============================================================
+ISR-0: feedback=False, generic=False, attention=False, spec=False
+============================================================
+  [1/15] P01_buffer_copy
+2026-05-28 21:41:19,748 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000590 ✓
+    Init=0.000590 → Best=0.000590 (Δ=+0.000000), 1 iters
+  [2/15] P02_array_access
+2026-05-28 21:41:38,295 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000798 ✓
+    Init=0.000798 → Best=0.000798 (Δ=+0.000000), 1 iters
+  [3/15] P03_memory_alloc
+2026-05-28 21:42:13,798 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000191 ✓
+    Init=0.000191 → Best=0.000191 (Δ=+0.000000), 1 iters
+  [4/15] P04_string_concat
+2026-05-28 21:42:28,500 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000074 ✓
+    Init=0.000074 → Best=0.000074 (Δ=+0.000000), 1 iters
+  [5/15] P05_free_memory
+2026-05-28 21:42:42,479 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000112 ✓
+    Init=0.000112 → Best=0.000112 (Δ=+0.000000), 1 iters
+  [6/15] P06_file_read
+2026-05-28 21:42:55,141 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.497025 →
+    Init=0.497025 → Best=0.497025 (Δ=+0.000000), 1 iters
+  [7/15] P07_int_parse
+2026-05-28 21:43:47,900 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.020147 →
+    Init=0.020147 → Best=0.020147 (Δ=+0.000000), 1 iters
+  [8/15] P08_linked_list
+2026-05-28 21:44:25,613 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000170 ✓
+    Init=0.000170 → Best=0.000170 (Δ=+0.000000), 1 iters
+  [9/15] P09_memcpy_wrapper
+2026-05-28 21:44:39,100 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.004552 →
+    Init=0.004552 → Best=0.004552 (Δ=+0.000000), 1 iters
+  [10/15] P10_input_loop
+2026-05-28 21:45:32,977 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.116563 →
+    Init=0.116563 → Best=0.116563 (Δ=+0.000000), 1 iters
+  [11/15] P11_struct_copy
+2026-05-28 21:45:52,481 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.001518 →
+    Init=0.001518 → Best=0.001518 (Δ=+0.000000), 1 iters
+  [12/15] P12_recursive_free
+2026-05-28 21:46:18,561 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000137 ✓
+    Init=0.000137 → Best=0.000137 (Δ=+0.000000), 1 iters
+  [13/15] P13_sprintf_use
+2026-05-28 21:46:27,926 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.546587 →
+    Init=0.546587 → Best=0.546587 (Δ=+0.000000), 1 iters
+  [14/15] P14_realloc_array
+2026-05-28 21:47:13,664 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.000819 ✓
+    Init=0.000819 → Best=0.000819 (Δ=+0.000000), 1 iters
+  [15/15] P15_cmd_arg
+2026-05-28 21:47:37,463 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-0] Iter 0: P(vul)=0.011769 →
+    Init=0.011769 → Best=0.011769 (Δ=+0.000000), 1 iters
+
+============================================================
+ISR-1: feedback=True, generic=True, attention=False, spec=False
+============================================================
+  [1/15] P01_buffer_copy
+2026-05-28 21:48:15,177 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000139 ✓
+    Init=0.000139 → Best=0.000139 (Δ=+0.000000), 1 iters
+  [2/15] P02_array_access
+2026-05-28 21:48:39,148 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.001114 →
+2026-05-28 21:49:06,880 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.000285 ✓
+    Init=0.001114 → Best=0.000285 (Δ=+0.000828), 2 iters
+  [3/15] P03_memory_alloc
+2026-05-28 21:49:50,023 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000073 ✓
+    Init=0.000073 → Best=0.000073 (Δ=+0.000000), 1 iters
+  [4/15] P04_string_concat
+2026-05-28 21:50:04,193 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000046 ✓
+    Init=0.000046 → Best=0.000046 (Δ=+0.000000), 1 iters
+  [5/15] P05_free_memory
+2026-05-28 21:50:30,749 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000147 ✓
+    Init=0.000147 → Best=0.000147 (Δ=+0.000000), 1 iters
+  [6/15] P06_file_read
+2026-05-28 21:50:40,876 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.414214 →
+2026-05-28 21:51:49,633 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.555345 →
+2026-05-28 21:53:57,239 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.354521 →
+2026-05-28 21:55:21,641 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.412365 →
+2026-05-28 21:56:54,106 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 4: P(vul)=0.377410 →
+    [ISR-1] Stagnated after 5 iterations
+    Init=0.414214 → Best=0.354521 (Δ=+0.059692), 5 iters
+  [7/15] P07_int_parse
+2026-05-28 21:58:04,728 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.067325 →
+2026-05-28 21:58:34,637 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.348266 →
+2026-05-28 21:59:26,554 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.352099 →
+2026-05-28 22:00:33,962 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.370976 →
+    [ISR-1] Stagnated after 4 iterations
+    Init=0.067325 → Best=0.067325 (Δ=+0.000000), 4 iters
+  [8/15] P08_linked_list
+2026-05-28 22:02:12,263 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.002595 →
+2026-05-28 22:02:30,269 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.000130 ✓
+    Init=0.002595 → Best=0.000130 (Δ=+0.002466), 2 iters
+  [9/15] P09_memcpy_wrapper
+2026-05-28 22:03:20,913 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000408 ✓
+    Init=0.000408 → Best=0.000408 (Δ=+0.000000), 1 iters
+  [10/15] P10_input_loop
+2026-05-28 22:03:44,575 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.027471 →
+2026-05-28 22:04:26,568 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.298594 →
+2026-05-28 22:04:54,747 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.626201 →
+2026-05-28 22:06:17,120 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.663604 →
+    [ISR-1] Stagnated after 4 iterations
+    Init=0.027471 → Best=0.027471 (Δ=+0.000000), 4 iters
+  [11/15] P11_struct_copy
+2026-05-28 22:08:35,141 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.023792 →
+2026-05-28 22:08:58,528 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.375623 →
+2026-05-28 22:09:40,060 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.004979 →
+2026-05-28 22:10:10,737 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.009212 →
+2026-05-28 22:10:59,220 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 4: P(vul)=0.422268 →
+    [ISR-1] Stagnated after 5 iterations
+    Init=0.023792 → Best=0.004979 (Δ=+0.018813), 5 iters
+  [12/15] P12_recursive_free
+2026-05-28 22:13:32,831 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.000179 ✓
+    Init=0.000179 → Best=0.000179 (Δ=+0.000000), 1 iters
+  [13/15] P13_sprintf_use
+2026-05-28 22:13:43,394 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.581793 →
+2026-05-28 22:14:15,697 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.000550 ✓
+    Init=0.581793 → Best=0.000550 (Δ=+0.581243), 2 iters
+  [14/15] P14_realloc_array
+2026-05-28 22:15:28,037 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.001372 →
+2026-05-28 22:16:01,905 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.843621 →
+2026-05-28 22:16:49,673 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.683772 →
+2026-05-28 22:17:50,829 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.683772 →
+    [ISR-1] Stagnated after 4 iterations
+    Init=0.001372 → Best=0.001372 (Δ=+0.000000), 4 iters
+  [15/15] P15_cmd_arg
+2026-05-28 22:18:56,252 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 0: P(vul)=0.011416 →
+2026-05-28 22:19:27,857 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 1: P(vul)=0.431513 →
+2026-05-28 22:20:11,557 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 2: P(vul)=0.554132 →
+2026-05-28 22:21:13,459 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-1] Iter 3: P(vul)=0.479367 →
+    [ISR-1] Stagnated after 4 iterations
+    Init=0.011416 → Best=0.011416 (Δ=+0.000000), 4 iters
+
+============================================================
+ISR-2: feedback=True, generic=False, attention=True, spec=False
+============================================================
+  [1/15] P01_buffer_copy
+2026-05-28 22:22:10,554 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000259 ✓
+    Init=0.000259 → Best=0.000259 (Δ=+0.000000), 1 iters
+  [2/15] P02_array_access
+2026-05-28 22:22:31,090 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.005927 →
+2026-05-28 22:23:02,478 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.005927 →
+2026-05-28 22:23:20,932 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.005927 →
+2026-05-28 22:23:48,459 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 3: P(vul)=0.005927 →
+    [ISR-2] Stagnated after 4 iterations
+    Init=0.005927 → Best=0.005927 (Δ=+0.000000), 4 iters
+  [3/15] P03_memory_alloc
+2026-05-28 22:23:55,315 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000222 ✓
+    Init=0.000222 → Best=0.000222 (Δ=+0.000000), 1 iters
+  [4/15] P04_string_concat
+2026-05-28 22:24:09,688 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000104 ✓
+    Init=0.000104 → Best=0.000104 (Δ=+0.000000), 1 iters
+  [5/15] P05_free_memory
+2026-05-28 22:24:27,878 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000112 ✓
+    Init=0.000112 → Best=0.000112 (Δ=+0.000000), 1 iters
+  [6/15] P06_file_read
+2026-05-28 22:24:34,372 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.177622 →
+2026-05-28 22:25:14,962 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.074238 →
+2026-05-28 22:25:51,129 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.074238 →
+2026-05-28 22:27:04,412 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 3: P(vul)=0.209521 →
+2026-05-28 22:27:46,051 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 4: P(vul)=0.206406 →
+    [ISR-2] Stagnated after 5 iterations
+    Init=0.177622 → Best=0.074238 (Δ=+0.103384), 5 iters
+  [7/15] P07_int_parse
+2026-05-28 22:28:42,223 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.019190 →
+2026-05-28 22:29:22,616 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.014267 →
+2026-05-28 22:30:25,444 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.015216 →
+2026-05-28 22:31:03,540 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 3: P(vul)=0.510210 →
+2026-05-28 22:31:40,154 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 4: P(vul)=0.304958 →
+    [ISR-2] Stagnated after 5 iterations
+    Init=0.019190 → Best=0.014267 (Δ=+0.004923), 5 iters
+  [8/15] P08_linked_list
+2026-05-28 22:33:12,875 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000691 ✓
+    Init=0.000691 → Best=0.000691 (Δ=+0.000000), 1 iters
+  [9/15] P09_memcpy_wrapper
+2026-05-28 22:33:26,147 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000291 ✓
+    Init=0.000291 → Best=0.000291 (Δ=+0.000000), 1 iters
+  [10/15] P10_input_loop
+2026-05-28 22:33:41,153 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.039227 →
+2026-05-28 22:33:56,572 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.613749 →
+2026-05-28 22:34:52,554 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.644413 →
+2026-05-28 22:36:13,166 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 3: P(vul)=0.480459 →
+    [ISR-2] Stagnated after 4 iterations
+    Init=0.039227 → Best=0.039227 (Δ=+0.000000), 4 iters
+  [11/15] P11_struct_copy
+2026-05-28 22:37:53,963 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.001507 →
+2026-05-28 22:38:16,647 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.004758 →
+2026-05-28 22:38:31,030 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.000524 ✓
+    Init=0.001507 → Best=0.000524 (Δ=+0.000983), 3 iters
+  [12/15] P12_recursive_free
+2026-05-28 22:38:50,300 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000057 ✓
+    Init=0.000057 → Best=0.000057 (Δ=+0.000000), 1 iters
+  [13/15] P13_sprintf_use
+2026-05-28 22:39:04,638 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000613 ✓
+    Init=0.000613 → Best=0.000613 (Δ=+0.000000), 1 iters
+  [14/15] P14_realloc_array
+2026-05-28 22:39:39,913 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.000582 ✓
+    Init=0.000582 → Best=0.000582 (Δ=+0.000000), 1 iters
+  [15/15] P15_cmd_arg
+2026-05-28 22:40:07,722 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 0: P(vul)=0.017498 →
+2026-05-28 22:40:27,988 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 1: P(vul)=0.871457 →
+2026-05-28 22:41:14,910 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 2: P(vul)=0.917433 →
+2026-05-28 22:42:11,476 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-2] Iter 3: P(vul)=0.551813 →
+    [ISR-2] Stagnated after 4 iterations
+    Init=0.017498 → Best=0.017498 (Δ=+0.000000), 4 iters
+
+============================================================
+ISR-3: feedback=True, generic=False, attention=True, spec=True
+============================================================
+  [1/15] P01_buffer_copy
+2026-05-28 22:43:01,631 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:44:09,857 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.006386 →
+2026-05-28 22:45:38,684 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.001194 →
+2026-05-28 22:46:47,139 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.003633 →
+2026-05-28 22:47:16,612 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.003633 →
+2026-05-28 22:47:29,593 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 4: P(vul)=0.003249 →
+    [ISR-3] Stagnated after 5 iterations
+    Init=0.006386 → Best=0.001194 (Δ=+0.005192), 5 iters
+  [2/15] P02_array_access
+2026-05-28 22:47:59,201 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:48:37,949 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.002481 →
+2026-05-28 22:48:57,846 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.000201 ✓
+    Init=0.002481 → Best=0.000201 (Δ=+0.002280), 2 iters
+  [3/15] P03_memory_alloc
+2026-05-28 22:49:23,263 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:50:01,985 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.007585 →
+2026-05-28 22:50:29,570 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.033783 →
+2026-05-28 22:51:00,178 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.000700 ✓
+    Init=0.007585 → Best=0.000700 (Δ=+0.006886), 3 iters
+  [4/15] P04_string_concat
+2026-05-28 22:52:20,915 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:52:48,068 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.000857 ✓
+    Init=0.000857 → Best=0.000857 (Δ=+0.000000), 1 iters
+  [5/15] P05_free_memory
+2026-05-28 22:53:20,857 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:54:00,046 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.005995 →
+2026-05-28 22:54:16,865 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.000118 ✓
+    Init=0.005995 → Best=0.000118 (Δ=+0.005877), 2 iters
+  [6/15] P06_file_read
+2026-05-28 22:54:38,206 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 22:55:24,516 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.479732 →
+2026-05-28 22:57:43,481 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.479732 →
+2026-05-28 22:58:45,206 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.427037 →
+2026-05-28 23:01:03,963 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.393031 →
+2026-05-28 23:02:04,841 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 4: P(vul)=0.469107 →
+    Init=0.479732 → Best=0.393031 (Δ=+0.086700), 5 iters
+  [7/15] P07_int_parse
+2026-05-28 23:02:46,862 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:03:24,317 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.403297 →
+2026-05-28 23:05:16,104 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.470066 →
+2026-05-28 23:06:21,668 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.451203 →
+2026-05-28 23:07:56,792 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.374993 →
+2026-05-28 23:09:41,922 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 4: P(vul)=0.033260 →
+    Init=0.403297 → Best=0.033260 (Δ=+0.370037), 5 iters
+  [8/15] P08_linked_list
+2026-05-28 23:11:45,926 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:12:40,223 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.000162 ✓
+    Init=0.000162 → Best=0.000162 (Δ=+0.000000), 1 iters
+  [9/15] P09_memcpy_wrapper
+2026-05-28 23:12:51,108 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:14:08,257 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.001621 →
+2026-05-28 23:14:33,818 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.000054 ✓
+    Init=0.001621 → Best=0.000054 (Δ=+0.001567), 2 iters
+  [10/15] P10_input_loop
+2026-05-28 23:15:34,665 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:16:19,162 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.572505 →
+2026-05-28 23:18:10,115 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.615318 →
+2026-05-28 23:19:28,551 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.612469 →
+2026-05-28 23:21:12,487 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.446898 →
+2026-05-28 23:22:46,739 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 4: P(vul)=0.422930 →
+    Init=0.572505 → Best=0.422930 (Δ=+0.149575), 5 iters
+  [11/15] P11_struct_copy
+2026-05-28 23:24:33,255 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:25:37,292 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.039209 →
+2026-05-28 23:25:59,961 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.000281 ✓
+    Init=0.039209 → Best=0.000281 (Δ=+0.038928), 2 iters
+  [12/15] P12_recursive_free
+2026-05-28 23:26:16,673 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:27:19,040 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.000458 ✓
+    Init=0.000458 → Best=0.000458 (Δ=+0.000000), 1 iters
+  [13/15] P13_sprintf_use
+2026-05-28 23:27:47,103 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:28:28,904 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.531247 →
+2026-05-28 23:30:21,335 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.388193 →
+2026-05-28 23:31:39,893 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.388193 →
+2026-05-28 23:32:41,064 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.388193 →
+2026-05-28 23:33:22,350 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 4: P(vul)=0.381988 →
+    Init=0.531247 → Best=0.381988 (Δ=+0.149259), 5 iters
+  [14/15] P14_realloc_array
+2026-05-28 23:34:39,494 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:35:45,637 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.002901 →
+2026-05-28 23:36:09,980 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.001609 →
+2026-05-28 23:36:31,643 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.000637 ✓
+    Init=0.002901 → Best=0.000637 (Δ=+0.002265), 3 iters
+  [15/15] P15_cmd_arg
+2026-05-28 23:37:20,851 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-05-28 23:38:13,285 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 0: P(vul)=0.230191 →
+2026-05-28 23:39:54,067 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 1: P(vul)=0.230191 →
+2026-05-28 23:40:58,860 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 2: P(vul)=0.230191 →
+2026-05-28 23:42:14,366 [INFO] HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+    [ISR-3] Iter 3: P(vul)=0.416441 →
+    [ISR-3] Stagnated after 4 iterations
+    Init=0.230191 → Best=0.230191 (Δ=+0.000000), 4 iters
+
+============================================================
+SUMMARY
+============================================================
+Ablation    Init P(vul)  Best P(vul)     Δ P(vul)  Avg Iters
+----------------------------------------------------------
+ISR-0          0.080070     0.080070    +0.000000        1.0
+ISR-1          0.075472     0.031269    +0.044203        2.5
+ISR-2          0.017593     0.010307    +0.007286        2.3
+ISR-3          0.152309     0.097737    +0.054571        3.1
+
+Results saved: /home2/zzl/SecurePath/SecureProtoCoT/outputs/experiment_isr
+  iterations_*.csv: Per-iteration scoring data
+  report.json: Summary report
+(securepath) (storygen-env) zzl@ubuntu:~/SecurePath$ 

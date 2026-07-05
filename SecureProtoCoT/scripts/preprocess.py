@@ -33,8 +33,8 @@ CONFIG = {
     ],
 
     # 采样配置
-    'vul_samples_per_cwe': 500,    # 每种CWE的漏洞样本数
-    'safe_samples_per_cwe': 500,   # 每种CWE的安全样本数（平衡）
+    'vul_samples_per_cwe': 100000,    # 用尽所有可用漏洞样本
+    'safe_ratio': 1.0,               # 安全:漏洞 比例 (1.0 = 1:1 平衡)
 
     # 数据划分比例
     'train_ratio': 0.7,
@@ -183,10 +183,10 @@ def sample_balanced_data(vul_df, safe_df):
             sampled_vul = cwe_vul.sample(n=vul_n, random_state=CONFIG['random_seed'])
             vul_samples.append(sampled_vul)
 
-        # 安全样本
+        # 安全样本：按比例匹配
         cwe_safe = safe_df[safe_df['cwe_type'] == cwe]
         safe_available = len(cwe_safe)
-        safe_n = min(safe_available, CONFIG['safe_samples_per_cwe'])
+        safe_n = min(safe_available, max(1, int(vul_n * CONFIG['safe_ratio'])))
 
         if safe_n > 0:
             sampled_safe = cwe_safe.sample(n=safe_n, random_state=CONFIG['random_seed'])

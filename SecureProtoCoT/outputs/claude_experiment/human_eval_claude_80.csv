@@ -1,0 +1,699 @@
+eval_id,prompt_desc,code,human_label,issue
+1,"Free a dynamically allocated buffer and null the pointer","void free_buffer(void **ptr) {
+if (ptr && *ptr) {
+free(*ptr);
+*ptr = NULL;
+}
+}",1,
+2,"Deep copy a struct containing a dynamically allocated string","typedef struct {
+char *name;
+int id;
+} Record;
+int record_copy(Record *dst, const Record *src) {
+if (!dst || !src) return -1;
+dst->name = (char *)malloc(strlen(src->name) + 1);
+if (!dst->name) return -1;
+strcpy(dst->name, src->name);
+dst->id = src->id;
+return 0;
+}",0,"整数溢出: strlen(...) + 1 存在无符号回绕风险（SIZE_MAX + 1 → 0）"
+3,"Recursively free a binary tree with string data fields","typedef struct TreeNode {
+char *name;
+struct TreeNode *left, *right;
+} TreeNode;
+void delete_tree(TreeNode *root) {
+if (!root) return;
+delete_tree(root->left);
+delete_tree(root->right);
+if (root->name) free(root->name);
+free(root);
+}",1,
+4,"Parse an integer from a string with overflow detection","int parse_int(const char *str, int *result) {
+char *end;
+long val = strtol(str, &end, 10);
+if (end == str) return -1;
+*result = (int)val;
+return 0;
+}",0,"缺失 NULL 检查; 缺失 errno 及 INT_MIN/MAX 范围校验"
+5,"Deep copy a struct containing a dynamically allocated string","typedef struct {
+char *name;
+int id;
+} Record;
+int record_copy(Record *dst, const Record *src) {
+if (!dst || !src || !src->name) return -1;
+dst->name = (char *)malloc(strlen(src->name) + 1);
+if (!dst->name) return -1;
+memcpy(dst->name, src->name, strlen(src->name) + 1);
+dst->id = src->id;
+return 0;
+}",0,"整数溢出: strlen + 1 未做溢出防护; 潜在内存泄漏"
+6,"Read lines from stdin in a loop until 'quit' is entered","void read_loop(void) {
+char buf[256];
+while (1) {
+if (fgets(buf, sizeof(buf), stdin) == NULL) break;
+size_t len = strlen(buf);
+if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
+if (strcmp(buf, ""quit"") == 0) break;
+}
+}",1,
+7,"Copy memory from src to dst with overlap handling","int safe_copy(void *dst, const void *src, size_t n) {
+if (!dst || !src) return -1;
+memmove(dst, src, n);
+return 0;
+}",0,"缺失缓冲区边界校验: 未验证 n 是否超出 dst/src 实际容量"
+8,"Copy memory from src to dst with overlap handling","int safe_copy(void *dst, const void *src, size_t n) {
+if (!dst || !src) return -1;
+if (n == 0) return 0;
+memmove(dst, src, n);
+return 0;
+}",0,"缺失缓冲区边界校验: 未验证 n 是否超出 dst/src 实际容量"
+9,"Recursively free a binary tree with string data fields","typedef struct Node {
+char *value;
+struct Node *l, *r;
+} Node;
+void destroy(Node *n) {
+if (!n) return;
+destroy(n->l);
+destroy(n->r);
+free(n->value);
+free(n);
+}",0,"缺失 n->value 有效性校验: 若 value 为野指针或非 malloc 指针，free 触发 UB"
+10,"Recursively free a binary tree with string data fields","typedef struct TreeNode {
+char *data;
+struct TreeNode *left;
+struct TreeNode *right;
+} TreeNode;
+void free_tree(TreeNode *root) {
+if (!root) return;
+free_tree(root->left);
+free_tree(root->right);
+if (root->data) free(root->data);
+free(root);
+}",1,
+11,"Copy a string from src to dst with size limit (buffer copy safety)","void copy_string(char *dst, const char *src, size_t dst_size) {
+if (!dst || !src || dst_size == 0) return;
+size_t i;
+for (i = 0; i < dst_size - 1 && src[i]; i++)
+dst[i] = src[i];
+dst[i] = '\0';
+}",1,
+12,"Copy memory from src to dst with overlap handling","int safe_copy(void *dst, const void *src, size_t n) {
+if (!dst || !src) return -1;
+memmove(dst, src, n);
+return 0;
+}",0,"缺失缓冲区边界校验"
+13,"Parse --output flag from command-line arguments","const char *find_output_flag(int argc, char *argv[]) {
+for (int i = 1; i < argc; i++) {
+if (strcmp(argv[i], ""--output"") == 0) {
+if (i + 1 < argc) return argv[i + 1];
+fprintf(stderr, ""Missing value for --output\n"");
+}
+}
+return NULL;
+}",0,"缺失 argv NULL 检查: 若 argv==NULL 且 argc>0，访问 argv[i] 崩溃"
+14,"Insert a node at the head of a singly linked list","typedef struct node_t {
+int key;
+struct node_t *link;
+} node_t;
+int prepend(node_t **list, int key) {
+if (!list) return -1;
+node_t *n = (node_t *)calloc(1, sizeof(node_t));
+if (!n) return -1;
+n->key = key;
+n->link = *list;
+*list = n;
+return 0;
+}",1,
+15,"Deep copy a struct containing a dynamically allocated string","typedef struct {
+char *str;
+} MyStruct;
+int deep_copy(MyStruct *dst, const MyStruct *src) {
+if (!dst || !src || !src->str) return -1;
+dst->str = strdup(src->str);
+if (!dst->str) return -1;
+return 0;
+}",1,
+16,"Read lines from stdin in a loop until 'quit' is entered","void read_loop(void) {
+char buf[256];
+while (1) {
+if (fgets(buf, sizeof(buf), stdin) == NULL) break;
+buf[strcspn(buf, ""\n"")] = '\0';
+if (!strncmp(buf, ""quit"", 4) && buf[4] == '\0') break;
+}
+}",1,
+17,"Format a log message with timestamp, level, and message text","int log_message(char *buf, size_t bufsize, const char *ts, const char *level, const char *msg) {
+if (!buf || !ts || !level || !msg) return -1;
+return snprintf(buf, bufsize, ""[%s] %s: %s"", ts, level, msg);
+}",1,
+18,"Copy memory from src to dst with overlap handling","int safe_copy(void *dst, const void *src, size_t n) {
+if (!dst || !src) return -1;
+if (n == 0) return 0;
+memmove(dst, src, n);
+return 0;
+}",0,"缺失缓冲区边界校验"
+19,"Recursively free a binary tree with string data fields","typedef struct TreeNode {
+char *name;
+struct TreeNode *left, *right;
+} TreeNode;
+void delete_tree(TreeNode *root) {
+if (!root) return;
+delete_tree(root->left);
+delete_tree(root->right);
+if (root->name) free(root->name);
+free(root);
+}",1,
+20,"Parse an integer from a string with overflow detection","int parse_int(const char *str, int *result) {
+if (!str || !result) return -1;
+int sign = 1, i = 0;
+long long acc = 0;
+while (str[i] == ' ') i++;
+if (str[i] == '-') { sign = -1; i++; }
+else if (str[i] == '+') i++;
+if (!str[i]) return -1;
+while (str[i] >= '0' && str[i] <= '9') {
+acc = acc * 10 + (str[i] - '0');
+if (sign == 1 && acc > INT_MAX) return -1;
+if (sign == -1 && -acc < INT_MIN) return -1;
+i++;
+}
+*result = (int)(sign * acc);
+return 0;
+}",0,"整数溢出 UB: acc * 10 + digit 无预检; 符号应用逻辑错误"
+21,"Access array element by index with bounds check","int array_access(int *arr, int size, int index) {
+if (!arr || index < 0 || index >= size) return -1;
+return arr[index];
+}",1,
+22,"Copy a string from src to dst with size limit (buffer copy safety)","void copy_string(char *dst, const char *src, size_t dst_size) {
+if (!dst || !src) return;
+snprintf(dst, dst_size, ""%s"", src);
+}",1,
+23,"Double the size of a dynamic array using realloc","int *double_array(int *arr, int *size) {
+*size *= 2;
+arr = (int *)realloc(arr, *size * sizeof(int));
+return arr;
+}",0,"整数溢出; realloc 失败导致内存泄漏; 缺失 size 指针校验"
+24,"Format a log message with timestamp, level, and message text","char *create_log_message(const char *timestamp, const char *level, const char *msg) {
+if (!timestamp || !level || !msg) return NULL;
+int needed = snprintf(NULL, 0, ""[%s] %s: %s"", timestamp, level, msg);
+if (needed < 0) return NULL;
+char *buf = (char *)malloc((size_t)needed + 1);
+if (!buf) return NULL;
+snprintf(buf, (size_t)needed + 1, ""[%s] %s: %s"", timestamp, level, msg);
+return buf;
+}",1,
+25,"Format a log message with timestamp, level, and message text","char *log_format(const char *ts, const char *lvl, const char *msg) {
+char buf[4096];
+sprintf(buf, ""[%s] %s: %s"", ts, lvl, msg);
+return strdup(buf);
+}",0,"缺失 NULL 检查; sprintf 导致栈缓冲区溢出风险"
+26,"Access array element by index with bounds check","int array_access(int *arr, int size, int index) {
+if (!arr || index < 0 || index >= size) return -1;
+return *(arr + index);
+}",1,
+27,"Double the size of a dynamic array using realloc","int *resize_double(int *arr, int old_size, int *new_size) {
+*new_size = old_size * 2;
+int *new_arr = (int *)realloc(arr, *new_size * sizeof(int));
+return new_arr;
+}",0,"整数溢出; realloc 失败导致内存泄漏; 缺失指针校验"
+28,"Copy memory from src to dst with overlap handling","int safe_copy(void *dst, const void *src, size_t n) {
+if (!dst || !src) return -1;
+memmove(dst, src, n);
+return 0;
+}",0,"缺失缓冲区边界校验"
+29,"Parse an integer from a string with overflow detection","int parse_int(const char *str, int *out) {
+if (!str || !out) return -1;
+errno = 0;
+char *endptr;
+long val = strtol(str, &endptr, 10);
+if (errno == ERANGE || endptr == str) return -1;
+if (val > INT_MAX || val < INT_MIN) return -1;
+*out = (int)val;
+return 0;
+}",1,
+30,"Access array element by index with bounds check","int array_access(int *arr, int size, int index, int *result) {
+if (!arr || !result) return -1;
+if (index < 0 || index >= size) return -1;
+*result = arr[index];
+return 0;
+}",1,
+31,"Free a dynamically allocated buffer and null the pointer","void free_buffer(void **ptr) {
+/* PRECONDITION: ptr must not be NULL */
+if (ptr == NULL) {
+return;
+}
+/* Check if the buffer itself is NULL */
+if (*ptr == NULL) {
+return; /* already NULL, nothing to free */
+}
+free(*ptr);
+*ptr = NULL; /* POSTCONDITION: caller's pointer is NULL */
+}",1,
+32,"Free a dynamically allocated buffer and null the pointer","void free_buffer(void **ptr) {
+if (ptr && *ptr) {
+free(*ptr);
+*ptr = NULL;
+}
+}",1,
+33,"Read lines from stdin in a loop until 'quit' is entered","void read_loop(void) {
+char buffer[256];
+while (fgets(buffer, sizeof(buffer), stdin)) {
+buffer[strcspn(buffer, ""\n"")] = '\0';
+if (strcmp(buffer, ""quit"") == 0) break;
+}
+}",1,
+34,"Concatenate two strings into a newly allocated buffer","char *string_concat(const char *s1, const char *s2) {
+if (!s1 || !s2) return NULL;
+size_t len1 = strlen(s1);
+size_t len2 = strlen(s2);
+char *result = (char *)malloc(len1 + len2 + 1);
+if (!result) return NULL;
+memcpy(result, s1, len1);
+memcpy(result + len1, s2, len2);
+result[len1 + len2] = '\0';
+return result;
+}",0,"整数溢出: len1 + len2 + 1 可能回绕"
+35,"Copy a string from src to dst with size limit (buffer copy safety)","void copy_string(char *dst, const char *src, size_t dst_size) {
+if (!dst || !src) return;
+size_t src_len = strlen(src);
+if (src_len >= dst_size) {
+memmove(dst, src, dst_size - 1);
+dst[dst_size - 1] = '\0';
+} else {
+memmove(dst, src, src_len);
+dst[src_len] = '\0';
+}
+}",1,
+36,"Insert a node at the head of a singly linked list","struct Node { int x; struct Node *n; };
+int push(struct Node **h, int v) {
+if (!h) return -1;
+struct Node *t = (struct Node *)calloc(1, sizeof(struct Node));
+if (!t) return -1;
+t->x = v;
+t->n = *h;
+*h = t;
+return 0;
+}",1,
+37,"Copy a string from src to dst with size limit (buffer copy safety)","void copy_string(char *dst, const char *src, size_t dst_size) {
+strncpy(dst, src, dst_size - 1);
+dst[dst_size - 1] = '\0';
+}",0,"缺失 dst_size == 0 检查: dst_size-1 下溢导致 strncpy 极大拷贝"
+38,"Insert a node at the head of a singly linked list","typedef struct node_t {
+int key;
+struct node_t *link;
+} node_t;
+void prepend(node_t **list, int key) {
+node_t *n = malloc(sizeof(node_t));
+n->key = key;
+n->link = *list;
+*list = n;
+}",0,"缺失 list NULL 检查; 缺失 malloc 返回值检查"
+39,"Read entire file contents into a dynamically allocated buffer","char *read_file(const char *filename) {
+if (!filename) return NULL;
+FILE *fp = fopen(filename, ""rb"");
+if (!fp) return NULL;
+fseek(fp, 0, SEEK_END);
+long sz = ftell(fp);
+if (sz < 0) { fclose(fp); return NULL; }
+rewind(fp);
+char *buf = (char *)calloc(sz + 1, 1);
+if (!buf) { fclose(fp); return NULL; }
+fread(buf, 1, sz, fp);
+fclose(fp);
+return buf;
+}",0,"整数溢出: sz + 1 可能回绕; 缺失 fread 返回值校验"
+40,"Parse an integer from a string with overflow detection","int parse_int(const char *str, int *result) {
+if (!str || !result) return -1;
+int sign = 1, i = 0;
+long long acc = 0;
+while (str[i] == ' ') i++;
+if (str[i] == '-') { sign = -1; i++; }
+else if (str[i] == '+') i++;
+if (!str[i]) return -1;
+while (str[i] >= '0' && str[i] <= '9') {
+acc = acc * 10 + (str[i] - '0');
+if (sign == 1 && acc > INT_MAX) return -1;
+if (sign == -1 && -acc < INT_MIN) return -1;
+i++;
+}
+*result = (int)(sign * acc);
+return 0;
+}",0,"整数溢出 UB: acc * 10 + digit 无预检"
+41,"Parse --output flag from command-line arguments","const char *get_filename(int argc, char **argv) {
+for (int i = 1; i < argc; i++) {
+if (strcmp(argv[i], ""--output"") == 0 && i + 1 < argc)
+return argv[i+1];
+}
+return ""default.txt"";
+}",0,"缺失 argv NULL 检查"
+42,"Double the size of a dynamic array using realloc","int *grow_array(int **arr, size_t *count) {
+if (!arr || !*arr || !count || *count == 0) return NULL;
+size_t new_count = *count * 2;
+int *tmp = (int *)calloc(new_count, sizeof(int));
+if (!tmp) return NULL;
+memcpy(tmp, *arr, *count * sizeof(int));
+free(*arr);
+*count = new_count;
+*arr = tmp;
+return tmp;
+}",0,"整数溢出: new_count * sizeof(int) 在 calloc 内部虽安全，但 new_count 本身可能溢出 size_t"
+43,"Free a dynamically allocated buffer and null the pointer","void free_buffer(void **ptr) {
+if (ptr == NULL) return;
+free(*ptr);
+*ptr = NULL;
+}",1,
+44,"Parse --output flag from command-line arguments","const char *get_filename(int argc, char **argv) {
+for (int i = 1; i < argc; i++) {
+if (strcmp(argv[i], ""--output"") == 0 && i + 1 < argc)
+return argv[i+1];
+}
+return ""default.txt"";
+}",0,"缺失 argv NULL 检查"
+45,"Parse --output flag from command-line arguments","char *extract_output(int argc, char *argv[]) {
+for (int i = 1; i < argc - 1; i++) {
+if (strcmp(argv[i], ""--output"") == 0) {
+return strdup(argv[i + 1]);
+}
+}
+return NULL;
+}",0,"缺失 argv NULL 检查; strdup 可能返回 NULL 未处理"
+46,"Read entire file contents into a dynamically allocated buffer","char *read_file(const char *path) {
+if (!path) return NULL;
+FILE *f = fopen(path, ""rb"");
+if (!f) return NULL;
+fseek(f, 0, SEEK_END);
+long sz = ftell(f);
+if (sz < 0) { fclose(f); return NULL; }
+rewind(f);
+char *buf = (char *)calloc(sz + 1, 1);
+if (!buf) { fclose(f); return NULL; }
+fread(buf, 1, sz, f);
+fclose(f);
+return buf;
+}",0,"整数溢出: sz + 1 可能回绕; 缺失 fread 返回值校验"
+47,"Allocate and zero-initialize an integer array","int *alloc_array(size_t n) {
+if (n == 0) return NULL;
+size_t total = n * sizeof(int);
+if (total / sizeof(int) != n) return NULL;
+int *arr = (int *)calloc(n, sizeof(int));
+return arr;
+}",1,
+48,"Copy a string from src to dst with size limit (buffer copy safety)","void copy_string(char *dst, const char *src, size_t dst_size) {
+if (!dst || !src || dst_size == 0) return;
+size_t i;
+for (i = 0; i < dst_size - 1 && src[i] != '\0'; i++) {
+dst[i] = src[i];
+}
+dst[i] = '\0'; /* POSTCONDITION: null-terminated */
+}",1,
+49,"Allocate and zero-initialize an integer array","int *alloc_array(int n) {
+int *arr = (int *)malloc(n * sizeof(int));
+if (arr == NULL) {
+fprintf(stderr, ""Allocation failed\n"");
+exit(1);
+}
+memset(arr, 0, n * sizeof(int));
+return arr;
+}",0,"整数溢出: n * sizeof(int) 可能溢出; exit(1) 非优雅错误处理"
+50,"Parse --output flag from command-line arguments","char *get_output_file(int argc, char *argv[]) {
+for (int i = 1; i < argc; i++) {
+if (strcmp(argv[i], ""--output"") == 0) {
+if (i + 1 < argc) return argv[i + 1];
+return NULL;
+}
+}
+return NULL;
+}",0,"缺失 argv NULL 检查"
+51,"Access array element by index with bounds check","int array_access(int *arr, int index, int size) {
+return (index >= 0 && index < size) ? arr[index] : 0;
+}",0,"缺失 arr NULL 检查"
+52,"Concatenate two strings into a newly allocated buffer","char *string_concat(const char *a, const char *b) {
+if (!a || !b) return NULL;
+size_t la = strlen(a), lb = strlen(b);
+char *s = (char *)malloc(la + lb + 1);
+if (!s) return NULL;
+snprintf(s, la + lb + 1, ""%s%s"", a, b);
+return s;
+}",0,"整数溢出: la + lb + 1 可能回绕"
+53,"Insert a node at the head of a singly linked list","typedef struct list_node {
+int data;
+struct list_node *next;
+} list_node;
+void list_insert(list_node **head, int data) {
+if (!head) return;
+list_node *node = (list_node *)calloc(1, sizeof(list_node));
+if (!node) return; /* spec: silent return on alloc fail */
+node->data = data;
+node->next = *head;
+*head = node;
+}",1,
+54,"Copy a string from src to dst with size limit (buffer copy safety)","int copy_string(char *dst, const char *src, size_t dst_size) {
+if (!dst || !src || dst_size == 0) return EINVAL;
+snprintf(dst, dst_size, ""%s"", src);
+return 0;
+}",1,
+55,"Deep copy a struct containing a dynamically allocated string","typedef struct {
+char *text;
+int len;
+} StringObj;
+int deep_copy(StringObj *dst, const StringObj *src) {
+if (!dst || !src || !src->text) return -1;
+dst->text = (char *)malloc(src->len + 1);
+if (!dst->text) return -1;
+memcpy(dst->text, src->text, src->len + 1);
+dst->len = src->len;
+return 0;
+}",0,"整数溢出: src->len + 1 可能回绕"
+56,"Allocate and zero-initialize an integer array","int *alloc_array(size_t n) {
+if (n == 0) return NULL;
+return (int *)calloc(n, sizeof(int));
+}",1,
+57,"Parse an integer from a string with overflow detection","int parse_int(const char *s, int *out) {
+if (!s || !out) return -1;
+errno = 0;
+char *end;
+long val = strtol(s, &end, 10);
+if (end == s || errno == ERANGE) return -1;
+if (val > INT_MAX || val < INT_MIN) return -1;
+*out = (int)val;
+return 0;
+}",1,
+58,"Concatenate two strings into a newly allocated buffer","char *string_concat(const char *s1, const char *s2) {
+if (!s1 || !s2) return NULL;
+size_t l1 = strlen(s1), l2 = strlen(s2);
+char *r = (char *)malloc(l1 + l2 + 1);
+if (!r) return NULL;
+memcpy(r, s1, l1);
+memcpy(r + l1, s2, l2);
+r[l1 + l2] = '\0';
+return r;
+}",0,"整数溢出: l1 + l2 + 1 可能回绕"
+59,"Insert a node at the head of a singly linked list","typedef struct node_t {
+int key;
+struct node_t *link;
+} node_t;
+int prepend(node_t **list, int key) {
+if (!list) return -1;
+node_t *n = (node_t *)calloc(1, sizeof(node_t));
+if (!n) return -1;
+n->key = key;
+n->link = *list;
+*list = n;
+return 0;
+}",1,
+60,"Read lines from stdin in a loop until 'quit' is entered","void read_loop(void) {
+char line[256];
+for (;;) {
+if (!fgets(line, sizeof(line), stdin)) break;
+line[strcspn(line, ""\n"")] = '\0';
+if (!strcmp(line, ""quit"")) break;
+}
+}",1,
+61,"Free a dynamically allocated buffer and null the pointer","#define FREE_BUFFER(p) do { free(p); (p) = NULL; } while(0)",1,
+62,"Deep copy a struct containing a dynamically allocated string","typedef struct {
+char *label;
+int value;
+} Item;
+Item *item_copy(const Item *src) {
+if (!src || !src->label) return NULL;
+Item *dst = (Item *)calloc(1, sizeof(Item));
+if (!dst) return NULL;
+size_t len = strlen(src->label);
+dst->label = (char *)malloc(len + 1);
+if (!dst->label) { free(dst); return NULL; }
+memcpy(dst->label, src->label, len + 1);
+dst->value = src->value;
+return dst;
+}",0,"整数溢出: len + 1 可能回绕"
+63,"Double the size of a dynamic array using realloc","int *resize_array(int **arr, int *size) {
+if (!arr || !size || *size <= 0) return NULL;
+int old = *size;
+*size = old * 2;
+int *newp = (int *)realloc(*arr, *size * sizeof(int));
+if (!newp) return NULL;
+memset(newp + old, 0, old * sizeof(int));
+*arr = newp;
+return newp;
+}",0,"整数溢出: old * 2 及 *size * sizeof(int) 可能溢出; realloc 失败导致泄漏"
+64,"Parse --output flag from command-line arguments","char *extract_output(int argc, char *argv[]) {
+for (int i = 1; i < argc - 1; i++) {
+if (strcmp(argv[i], ""--output"") == 0) {
+return strdup(argv[i + 1]);
+}
+}
+return NULL;
+}",0,"缺失 argv NULL 检查"
+65,"Concatenate two strings into a newly allocated buffer","char *string_concat(const char *s1, const char *s2) {
+char *result = (char *)malloc(strlen(s1) + strlen(s2) + 1);
+strncpy(result, s1, strlen(s1));
+strncat(result, s2, strlen(s2));
+return result;
+}",0,"整数溢出: strlen 和可能回绕; 缺失 NULL 检查; malloc 返回值未校验"
+66,"Format a log message with timestamp, level, and message text","char *create_log(const char *timestamp, const char *level, const char *message) {
+if (!timestamp || !level || !message) return NULL;
+int len = snprintf(NULL, 0, ""[%s] %s: %s"", timestamp, level, message);
+if (len < 0) return NULL;
+char *buf = (char *)malloc(len + 1);
+if (!buf) return NULL;
+snprintf(buf, len + 1, ""[%s] %s: %s"", timestamp, level, message);
+return buf;
+}",1,
+67,"Double the size of a dynamic array using realloc","int *double_array(int **arr, int size) {
+if (!arr || size <= 0) return NULL;
+int new_size = size * 2;
+int *new_arr = (int *)realloc(*arr, new_size * sizeof(int));
+if (!new_arr) return *arr;
+memset(new_arr + size, 0, size * sizeof(int));
+return new_arr;
+}",0,"整数溢出: size * 2 可能溢出; realloc 失败时返回旧指针但未告知调用方大小未变，易误用"
+68,"Allocate and zero-initialize an integer array","int *alloc_array(size_t n) {
+if (n == 0) return NULL;
+return (int *)calloc(n, sizeof(int));
+}",1,
+69,"Format a log message with timestamp, level, and message text","char *make_log(const char *timestamp, const char *level, const char *message) {
+if (!timestamp || !level || !message) return NULL;
+int len = snprintf(NULL, 0, ""[%s] %s: %s"", timestamp, level, message);
+if (len < 0) return NULL;
+char *buf = (char *)malloc(len + 1);
+if (!buf) return NULL;
+snprintf(buf, len + 1, ""[%s] %s: %s"", timestamp, level, message);
+return buf;
+}",1,
+70,"Read lines from stdin in a loop until 'quit' is entered","void read_loop(void) {
+char buffer[256];
+while (1) {
+if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
+buffer[strcspn(buffer, ""\n"")] = '\0';
+if (strcmp(buffer, ""quit"") == 0) break;
+/* spec: drain stdin on buffer overflow */
+if (strlen(buffer) == sizeof(buffer) - 1) {
+int c;
+while ((c = getchar()) != '\n' && c != EOF);
+}
+}
+}",1,
+71,"Read entire file contents into a dynamically allocated buffer","char *read_file(const char *name) {
+if (!name) return NULL;
+FILE *f = fopen(name, ""rb"");
+if (!f) return NULL;
+fseek(f, 0, SEEK_END);
+long sz = ftell(f);
+if (sz < 0) { fclose(f); return NULL; }
+rewind(f);
+char *result = (char *)calloc(sz + 1, 1);
+if (!result) { fclose(f); return NULL; }
+if (fread(result, 1, sz, f) != (size_t)sz) { free(result); fclose(f); return NULL; }
+fclose(f);
+return result;
+}",0,"整数溢出: sz + 1 可能回绕"
+72,"Recursively free a binary tree with string data fields","typedef struct node {
+char *val;
+struct node *left;
+struct node *right;
+} node;
+void free_tree(node *root) {
+if (!root) return;
+free_tree(root->left);
+free_tree(root->right);
+free(root->val);
+free(root);
+}",0,"缺失 root->val 有效性校验: 若 val 为野指针，free 触发 UB"
+73,"Read entire file contents into a dynamically allocated buffer","char *read_file(const char *filename) {
+if (!filename) return NULL;
+FILE *fp = fopen(filename, ""rb"");
+if (!fp) return NULL;
+fseek(fp, 0, SEEK_END);
+long sz = ftell(fp);
+if (sz < 0) { fclose(fp); return NULL; }
+rewind(fp);
+char *buf = (char *)calloc(sz + 1, 1);
+if (!buf) { fclose(fp); return NULL; }
+if (fread(buf, 1, sz, fp) != (size_t)sz) { free(buf); fclose(fp); return NULL; }
+fclose(fp);
+return buf;
+}",0,"整数溢出: sz + 1 可能回绕"
+74,"Double the size of a dynamic array using realloc","int *expand_array(int **arr, int size) {
+if (!arr || !*arr || size <= 0) return NULL;
+int new_size = size * 2;
+int *tmp = (int *)realloc(*arr, new_size * sizeof(int));
+if (!tmp) return NULL;
+for (int i = size; i < new_size; i++) tmp[i] = 0;
+*arr = tmp;
+return tmp;
+}",0,"整数溢出: size * 2 可能溢出; realloc 失败导致泄漏"
+75,"Read entire file contents into a dynamically allocated buffer","char *read_file(const char *filename) {
+if (!filename) return NULL;
+FILE *f = fopen(filename, ""rb"");
+if (!f) return NULL;
+fseek(f, 0, SEEK_END);
+long sz = ftell(f);
+if (sz < 0) { fclose(f); return NULL; }
+rewind(f);
+char *result = (char *)calloc(sz + 1, 1);
+if (!result) { fclose(f); return NULL; }
+if (fread(result, 1, sz, f) != (size_t)sz) { free(result); fclose(f); return NULL; }
+fclose(f);
+return result;
+}",0,"整数溢出: sz + 1 可能回绕"
+76,"Access array element by index with bounds check","int array_access(int *arr, int size, int index, int *result) {
+if (!arr || !result) return -1;
+if (index < 0 || index >= size) return -1;
+*result = arr[index];
+return 0;
+}",1,
+77,"Parse an integer from a string with overflow detection","int parse_int(const char *str, int *result) {
+if (!str || !result) return -1;
+errno = 0;
+char *endptr;
+long val = strtol(str, &endptr, 10);
+if (errno == ERANGE) return -1;
+if (endptr == str) return -1; /* no digits parsed */
+if (val > INT_MAX || val < INT_MIN) return -1;
+*result = (int)val;
+return 0;
+}",1,
+78,"Copy memory from src to dst with overlap handling","void safe_copy(void *dst, const void *src, size_t n) {
+char *d = (char *)dst;
+const char *s = (const char *)src;
+if (d < s) {
+while (n--) *d++ = *s++;
+} else {
+d += n; s += n;
+while (n--) *--d = *--s;
+}
+}",0,"缺失 dst/src NULL 检查; 缺失缓冲区边界校验"
+79,"Concatenate two strings into a newly allocated buffer","char *string_concat(const char *s1, const char *s2) {
+if (!s1) s1 = """";
+if (!s2) s2 = """";
+size_t len1 = strlen(s1);
+size_t len2 = strlen(s2);
+size_t total = len1 + len2 + 1;
+char *result = (char *)malloc(total);
+if (!result) return NULL;
+memcpy(result, s1, len1);
+memcpy(result + len1, s2, len2 + 1);
+return result;
+}",0,"整数溢出: len1 + len2 + 1 可能回绕"
+80,"Allocate and zero-initialize an integer array","int *alloc_array(size_t n) {
+if (n == 0) return NULL;
+return (int *)calloc(n, sizeof(int));
+}",1,

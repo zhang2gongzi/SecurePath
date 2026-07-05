@@ -88,7 +88,7 @@ def plot_tsne(embeddings, labels, output_path):
     # t-SNE 参数
     tsne = TSNE(
         n_components=2,
-        perplexity=30,      # 可根据样本数调整 (5-50)
+        perplexity=30,
         learning_rate='auto',
         init='pca',
         random_state=CONFIG['random_seed'],

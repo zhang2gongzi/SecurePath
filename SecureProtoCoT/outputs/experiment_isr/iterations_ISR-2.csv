@@ -1,0 +1,1321 @@
+ablation_id,prompt_id,iteration,p_vul,code_len,code
+ISR-2,P01_buffer_copy,0,0.0002587827038951218,359,"char* string_copy(char* dest, size_t dest_size, const char* src) {
+    if (dest == NULL || dest_size == 0) {
+        return NULL;
+    }
+    if (src == NULL) {
+        *dest = '\0';
+        return dest;
+    }
+    size_t i = 0;
+    while (i < dest_size - 1 && src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+    return dest;
+}"
+ISR-2,P02_array_access,0,0.005927157122641802,614,"#include <stddef.h>
+
+/**
+ * Safely retrieves an element from an integer array.
+ *
+ * @param arr    Pointer to the array (must not be NULL).
+ * @param length Number of elements in the array (must be > 0).
+ * @param idx    Zero-based index of the desired element.
+ * @param out    Pointer to store the retrieved element (must not be NULL).
+ * @return       0 on success, -1 on invalid arguments or out-of-bounds index.
+ */
+int array_get_element(const int *arr, size_t length, size_t idx, int *out) {
+    if (arr == NULL || out == NULL || idx >= length) {
+        return -1;
+    }
+    *out = arr[idx];
+    return 0;
+}"
+ISR-2,P02_array_access,1,0.005927157122641802,614,"#include <stddef.h>
+
+/**
+ * Safely retrieves an element from an integer array.
+ *
+ * @param arr    Pointer to the array (must not be NULL).
+ * @param length Number of elements in the array (must be > 0).
+ * @param idx    Zero-based index of the desired element.
+ * @param out    Pointer to store the retrieved element (must not be NULL).
+ * @return       0 on success, -1 on invalid arguments or out-of-bounds index.
+ */
+int array_get_element(const int *arr, size_t length, size_t idx, int *out) {
+    if (arr == NULL || out == NULL || idx >= length) {
+        return -1;
+    }
+    *out = arr[idx];
+    return 0;
+}"
+ISR-2,P02_array_access,2,0.005927157122641802,614,"#include <stddef.h>
+
+/**
+ * Safely retrieves an element from an integer array.
+ *
+ * @param arr    Pointer to the array (must not be NULL).
+ * @param length Number of elements in the array (must be > 0).
+ * @param idx    Zero-based index of the desired element.
+ * @param out    Pointer to store the retrieved element (must not be NULL).
+ * @return       0 on success, -1 on invalid arguments or out-of-bounds index.
+ */
+int array_get_element(const int *arr, size_t length, size_t idx, int *out) {
+    if (arr == NULL || out == NULL || idx >= length) {
+        return -1;
+    }
+    *out = arr[idx];
+    return 0;
+}"
+ISR-2,P02_array_access,3,0.005927157122641802,614,"#include <stddef.h>
+
+/**
+ * Safely retrieves an element from an integer array.
+ *
+ * @param arr    Pointer to the array (must not be NULL).
+ * @param length Number of elements in the array (must be > 0).
+ * @param idx    Zero-based index of the desired element.
+ * @param out    Pointer to store the retrieved element (must not be NULL).
+ * @return       0 on success, -1 on invalid arguments or out-of-bounds index.
+ */
+int array_get_element(const int *arr, size_t length, size_t idx, int *out) {
+    if (arr == NULL || out == NULL || idx >= length) {
+        return -1;
+    }
+    *out = arr[idx];
+    return 0;
+}"
+ISR-2,P03_memory_alloc,0,0.00022220418031793088,241,"#include <stdlib.h>
+#include <stddef.h>
+
+int* allocate_zeroed_int_array(size_t n) {
+    if (n == 0) {
+        return NULL;
+    }
+    int* ptr = (int*)calloc(n, sizeof(int));
+    if (ptr == NULL) {
+        return NULL;
+    }
+    return ptr;
+}"
+ISR-2,P04_string_concat,0,0.00010350896627642214,518,"char *concat_strings(const char *s1, const char *s2) {
+    size_t len1 = s1 ? strlen(s1) : 0;
+    size_t len2 = s2 ? strlen(s2) : 0;
+
+    /* Prevent integer overflow when computing total size */
+    if (len1 > SIZE_MAX - len2 - 1) {
+        return NULL;
+    }
+
+    size_t total = len1 + len2 + 1;
+    char *result = malloc(total);
+    if (!result) {
+        return NULL;
+    }
+
+    memcpy(result, s1 ? s1 : """", len1);
+    memcpy(result + len1, s2 ? s2 : """", len2);
+    result[len1 + len2] = '\0';
+
+    return result;
+}"
+ISR-2,P05_free_memory,0,0.00011214926780667156,116,"void safe_free(void **ptr) {
+    if (ptr != NULL && *ptr != NULL) {
+        free(*ptr);
+        *ptr = NULL;
+    }
+}"
+ISR-2,P06_file_read,0,0.17762191593647003,1658,"char* read_file_into_buffer(const char* filename, size_t* out_size) {
+    if (filename == NULL) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    FILE* fp = fopen(filename, ""rb"");
+    if (!fp) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Obtain file size
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    long filesize = ftell(fp);
+    if (filesize < 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Ensure it fits in a size_t with room for a null terminator
+    if ((unsigned long)filesize > SIZE_MAX - 1) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    size_t size = (size_t)filesize;
+
+    // Rewind to the beginning
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Allocate buffer
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Read entire file
+    if (fread(buffer, 1, size, fp) != size) {
+        free(buffer);
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Null terminate for convenience (caller may treat as string)
+    buffer[size] = '\0';
+
+    // Close the file and check for errors
+    if (fclose(fp) != 0) {
+        free(buffer);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Report size if requested
+    if (out_size) {
+        *out_size = size;
+    }
+
+    return buffer;
+}"
+ISR-2,P06_file_read,1,0.07423755526542664,1769,"char* read_file_into_buffer(const char* filename, size_t* out_size) {
+    if (filename == NULL) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    FILE* fp = fopen(filename, ""rb"");
+    if (!fp) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    long filesize = ftell(fp);
+    if (filesize < 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if ((unsigned long)filesize > SIZE_MAX - 1) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t size = (size_t)filesize;
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t total_read = 0;
+    while (total_read < size) {
+        size_t bytes_read = fread(buffer + total_read, 1, size - total_read, fp);
+        if (bytes_read == 0) {
+            if (ferror(fp) || feof(fp)) {
+                free(buffer);
+                fclose(fp);
+                if (out_size) *out_size = 0;
+                return NULL;
+            }
+            // Unexpected zero-length read, treat as error
+            free(buffer);
+            fclose(fp);
+            if (out_size) *out_size = 0;
+            return NULL;
+        }
+        total_read += bytes_read;
+    }
+    buffer[size] = '\0';
+    if (fclose(fp) != 0) {
+        free(buffer);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if (out_size) {
+        *out_size = size;
+    }
+    return buffer;
+}"
+ISR-2,P06_file_read,2,0.07423755526542664,1772,"char* read_file_into_buffer(const char* filename, size_t* out_size) {
+    if (filename == NULL) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    FILE* fp = fopen(filename, ""rb"");
+    if (!fp) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    long filesize = ftell(fp);
+    if (filesize < 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if ((unsigned long)filesize > SIZE_MAX - 1) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t size = (size_t)filesize;
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t total_read = 0;
+    while (total_read < size) {
+        size_t bytes_read = fread(buffer + total_read, 1, size - total_read, fp);
+        if (bytes_read == 0) {
+            if (ferror(fp) || feof(fp)) {
+                free(buffer);
+                fclose(fp);
+                if (out_size) *out_size = 0;
+                return NULL;
+            }
+            /* Unexpected zero-length read, treat as error */
+            free(buffer);
+            fclose(fp);
+            if (out_size) *out_size = 0;
+            return NULL;
+        }
+        total_read += bytes_read;
+    }
+    buffer[size] = '\0';
+    if (fclose(fp) != 0) {
+        free(buffer);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    if (out_size) {
+        *out_size = size;
+    }
+    return buffer;
+}"
+ISR-2,P06_file_read,3,0.20952118933200836,2225,"char* read_file_into_buffer(const char* filename, size_t* out_size) {
+    // Validate input pointer
+    if (filename == NULL) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Open file in binary mode
+    FILE* fp = fopen(filename, ""rb"");
+    if (!fp) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Determine file size
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    long filesize = ftell(fp);
+    if (filesize < 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Check for overflow (size_t capacity and null terminator)
+    if ((unsigned long)filesize > SIZE_MAX - 1) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t size = (size_t)filesize;
+
+    // Rewind to beginning
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Allocate buffer with extra byte for null terminator
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Read the entire file, handling partial reads robustly
+    size_t total_read = 0;
+    while (total_read < size) {
+        size_t bytes_read = fread(buffer + total_read, 1, size - total_read, fp);
+        if (bytes_read == 0) {
+            // No progress: error or unexpected end-of-file
+            if (ferror(fp) || feof(fp)) {
+                free(buffer);
+                fclose(fp);
+                if (out_size) *out_size = 0;
+                return NULL;
+            }
+            // Defensive: treat any zero-length read without EOF/error as fatal
+            free(buffer);
+            fclose(fp);
+            if (out_size) *out_size = 0;
+            return NULL;
+        }
+        total_read += bytes_read;
+    }
+
+    buffer[size] = '\0';
+
+    // Close the file and handle potential write errors on close
+    if (fclose(fp) != 0) {
+        free(buffer);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    if (out_size) {
+        *out_size = size;
+    }
+
+    return buffer;
+}"
+ISR-2,P06_file_read,4,0.20640622079372406,2260,"char* read_file_into_buffer(const char* filename, size_t* out_size) {
+    // Validate input pointer
+    if (filename == NULL) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Open file in binary mode
+    FILE* fp = fopen(filename, ""rb"");
+    if (!fp) {
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Determine file size
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    long filesize = ftell(fp);
+    if (filesize < 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Check for overflow: ensure filesize fits in size_t and allows room for null terminator
+    if ((unsigned long long)filesize > SIZE_MAX - 1) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+    size_t size = (size_t)filesize;
+
+    // Rewind to beginning
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Allocate buffer with extra byte for null terminator
+    char* buffer = malloc(size + 1);
+    if (!buffer) {
+        fclose(fp);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    // Read the entire file, handling partial reads robustly
+    size_t total_read = 0;
+    while (total_read < size) {
+        size_t bytes_read = fread(buffer + total_read, 1, size - total_read, fp);
+        if (bytes_read == 0) {
+            // No progress: error or unexpected end-of-file
+            if (ferror(fp) || feof(fp)) {
+                free(buffer);
+                fclose(fp);
+                if (out_size) *out_size = 0;
+                return NULL;
+            }
+            // Defensive: treat any zero-length read without EOF/error as fatal
+            free(buffer);
+            fclose(fp);
+            if (out_size) *out_size = 0;
+            return NULL;
+        }
+        total_read += bytes_read;
+    }
+
+    buffer[size] = '\0';
+
+    // Close the file and handle potential write errors on close
+    if (fclose(fp) != 0) {
+        free(buffer);
+        if (out_size) *out_size = 0;
+        return NULL;
+    }
+
+    if (out_size) {
+        *out_size = size;
+    }
+
+    return buffer;
+}"
+ISR-2,P07_int_parse,0,0.019189927726984024,504,"int parse_int(const char *str, int *out) {
+    if (!str || !out) return -1;
+    errno = 0;
+    char *end;
+    long val = strtol(str, &end, 10);
+    if (end == str) return -1;          // no digits found / empty string
+    while (*end) {
+        if (*end != ' ' && *end != '\t') return -1; // trailing junk
+        end++;
+    }
+    if (errno == ERANGE) return -1;     // overflow/underflow in long
+    if (val > INT_MAX || val < INT_MIN) return -1; // out of int range
+    *out = (int)val;
+    return 0;
+}"
+ISR-2,P07_int_parse,1,0.014266596175730228,832,"int parse_int(const char *str, int *out) {
+    if (!str || !out) return -1;
+    // skip leading whitespace and ensure at least one digit exists
+    const char *p = str;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p == '\0') return -1;          // only whitespace or empty
+
+    errno = 0;
+    char *end;
+    long val = strtol(str, &end, 10);
+    // no conversion at all (end == str) means invalid input,
+    // but we already checked for leading whitespace, this catches
+    // strings that start with non-digit after (possibly) whitespace
+    if (end == str) return -1;
+
+    // allow only trailing spaces/tabs
+    while (*end) {
+        if (*end != ' ' && *end != '\t') return -1;
+        end++;
+    }
+
+    if (errno == ERANGE) return -1;
+    if (val > INT_MAX || val < INT_MIN) return -1;
+    *out = (int)val;
+    return 0;
+}"
+ISR-2,P07_int_parse,2,0.015215556137263775,1173,"int parse_int(const char *str, size_t len, int *out) {
+    if (!str || !out || len == 0) return -1;
+
+    // skip leading whitespace
+    size_t i = 0;
+    while (i < len && (str[i] == ' ' || str[i] == '\t')) i++;
+    if (i == len) return -1; // only whitespace or empty
+
+    // limited-length null-terminated copy for strtol
+    // (max decimal int length is ~11 digits + sign, plus a bit of margin)
+    char tmp[32];
+    size_t j = 0;
+    while (i < len && j < sizeof(tmp) - 1) {
+        tmp[j++] = str[i++];
+    }
+    tmp[j] = '\0';
+
+    // if the input had more characters than our copy buffer, refuse
+    // (could be overflow or simply too long to be a valid int)
+    if (i < len) return -1;
+
+    // use strtol on the safe null-terminated copy
+    errno = 0;
+    char *end;
+    long val = strtol(tmp, &end, 10);
+
+    // conversion error (no digits parsed at all)
+    if (end == tmp) return -1;
+
+    // allow only trailing whitespace in the parsed part
+    while (*end) {
+        if (*end != ' ' && *end != '\t') return -1;
+        end++;
+    }
+
+    if (errno == ERANGE) return -1;
+    if (val > INT_MAX || val < INT_MIN) return -1;
+
+    *out = (int)val;
+    return 0;
+}"
+ISR-2,P07_int_parse,3,0.5102102756500244,2697,"int parse_int(const char *str, size_t len, int *out) {
+    if (!str || !out || len == 0) return -1;
+
+    size_t i = 0;
+    // skip leading whitespace
+    while (i < len && (str[i] == ' ' || str[i] == '\t')) i++;
+    if (i == len) return -1; // only whitespace
+
+    // optional sign
+    int sign = 1;
+    if (str[i] == '-') {
+        sign = -1;
+        i++;
+        if (i == len) return -1; // only a sign
+    } else if (str[i] == '+') {
+        i++;
+        if (i == len) return -1; // only a sign
+    }
+
+    // must have at least one digit
+    if (i == len || str[i] < '0' || str[i] > '9') return -1;
+
+    long val = 0;
+    while (i < len && str[i] >= '0' && str[i] <= '9') {
+        int digit = str[i] - '0';
+        // check overflow before multiplication/addition
+        if (sign == 1) {
+            if (val > (LONG_MAX - digit) / 10) return -1;
+        } else {
+            // val is positive, we build the absolute value then apply sign
+            // For negative numbers, need to check -val would fit in long.
+            // Long min is typically -LONG_MAX-1. So we handle carefully.
+            if (val > (LONG_MAX - digit) / 10) {
+                // check edge case where val*10+digit == -(LONG_MIN) exactly
+                // e.g. val*10+digit == -LONG_MIN would overflow when negated
+                // but we can detect that if val*10+digit > -(LONG_MIN) => overflow
+                // easier: use LONG_MIN / 10 etc.
+                // Since we are constructing the absolute value, we can check
+                // if val > LONG_MAX/10 or (val == LONG_MAX/10 && digit > LONG_MAX%10)
+                // But for negative sign, the allowed max absolute value is -(LONG_MIN)
+                // which is typically LONG_MAX+1, so another condition.
+                return -1;
+            }
+        }
+        val = val * 10 + digit;
+        i++;
+    }
+
+    if (i == len || (str[i] != ' ' && str[i] != '\t')) {
+        // After digits, allow only whitespace
+        while (i < len) {
+            if (str[i] != ' ' && str[i] != '\t') return -1;
+            i++;
+        }
+    } else {
+        // The loop above stopped because digit ended; but there might be more chars.
+        // We already checked that the next char is not whitespace, so if it's not
+        // digit or whitespace, or if we are not at end after whitespace skip.
+        // Let's just run a loop to consume any remaining whitespace and check.
+        while (i < len) {
+            if (str[i] != ' ' && str[i] != '\t') return -1;
+            i++;
+        }
+    }
+
+    // apply sign and check int range
+    long final = sign * val;
+    if (final > INT_MAX || final < INT_MIN) return -1;
+    *out = (int)final;
+    return 0;
+}"
+ISR-2,P07_int_parse,4,0.3049578070640564,1572,"int parse_int(const char *str, size_t len, int *out) {
+    if (!str || !out || len == 0) return -1;
+
+    size_t i = 0;
+    // skip leading whitespace
+    while (i < len && (str[i] == ' ' || str[i] == '\t')) i++;
+    if (i == len) return -1;
+
+    // optional sign
+    int sign = 1;
+    if (str[i] == '-') {
+        sign = -1;
+        i++;
+        if (i == len) return -1;
+    } else if (str[i] == '+') {
+        i++;
+        if (i == len) return -1;
+    }
+
+    // must have at least one digit
+    if (i == len || str[i] < '0' || str[i] > '9') return -1;
+
+    unsigned long acc = 0;
+    while (i < len && str[i] >= '0' && str[i] <= '9') {
+        unsigned int digit = (unsigned int)(str[i] - '0');
+        // overflow detection in unsigned arithmetic
+        if (acc > (ULONG_MAX - digit) / 10) return -1;
+        acc = acc * 10 + digit;
+        i++;
+    }
+
+    // skip trailing whitespace
+    while (i < len) {
+        if (str[i] != ' ' && str[i] != '\t') return -1;
+        i++;
+    }
+    // at this point all remaining characters must have been whitespace
+    if (i != len) return -1; // should never be reached after the loop, but just in case
+
+    // check against int range
+    if (sign == 1) {
+        if (acc > (unsigned long)INT_MAX) return -1;
+        *out = (int)acc;
+    } else {
+        // negative: absolute value must be <= (unsigned)INT_MAX + 1
+        if (acc > (unsigned long)INT_MAX + 1) return -1;
+        if (acc == (unsigned long)INT_MAX + 1) {
+            *out = INT_MIN;
+        } else {
+            *out = -(int)acc;
+        }
+    }
+
+    return 0;
+}"
+ISR-2,P08_linked_list,0,0.0006905269692651927,542,"#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+void insert_at_head(struct Node **head, int data) {
+    if (head == NULL) {
+        return; /* Invalid argument */
+    }
+
+    struct Node *new_node = (struct Node *)malloc(sizeof(struct Node));
+    if (new_node == NULL) {
+        /* Memory allocation failure - handle according to application needs.
+           Here we simply return, leaving the list unchanged. */
+        return;
+    }
+
+    new_node->data = data;
+    new_node->next = *head;
+    *head = new_node;
+}"
+ISR-2,P09_memcpy_wrapper,0,0.00029102718690410256,459,"void *memmove_safe(void *dest, const void *src, size_t n) {
+    if (dest == NULL || src == NULL) {
+        return NULL;
+    }
+    if (n == 0) {
+        return dest;
+    }
+    unsigned char *d = dest;
+    const unsigned char *s = src;
+    if (d < s) {
+        for (size_t i = 0; i < n; i++) {
+            d[i] = s[i];
+        }
+    } else if (d > s) {
+        for (size_t i = n; i > 0; i--) {
+            d[i - 1] = s[i - 1];
+        }
+    }
+    return dest;
+}"
+ISR-2,P10_input_loop,0,0.0392274335026741,742,"#include <stdio.h>
+#include <string.h>
+
+void read_until_quit(void) {
+    const size_t BUFSIZE = 256;
+    char buffer[BUFSIZE];
+
+    while (1) {
+        printf(""Enter input ('quit' to exit): "");
+        if (fgets(buffer, (int)BUFSIZE, stdin) == NULL) {
+            if (feof(stdin)) {
+                printf(""EOF encountered. Exiting.\n"");
+            } else {
+                perror(""fgets error"");
+            }
+            break;
+        }
+
+        /* Remove trailing newline character, if present */
+        buffer[strcspn(buffer, ""\n"")] = '\0';
+
+        /* Check if the user wants to quit */
+        if (strcmp(buffer, ""quit"") == 0) {
+            break;
+        }
+
+        /* Optional: process other input here, but not required */
+    }
+}"
+ISR-2,P10_input_loop,1,0.6137494444847107,1583,"void read_until_quit(void) {
+    const size_t BUFSIZE = 256;
+    char buffer[BUFSIZE];
+
+    while (1) {
+        printf(""Enter input ('quit' to exit): "");
+        if (fgets(buffer, (int)BUFSIZE, stdin) == NULL) {
+            if (feof(stdin)) {
+                printf(""EOF encountered. Exiting.\n"");
+            } else {
+                perror(""fgets error"");
+            }
+            break;
+        }
+
+        /* Safe newline removal: scan within buffer bounds */
+        size_t len = 0;
+        while (len < BUFSIZE && buffer[len] != '\0') {
+            if (buffer[len] == '\n') {
+                buffer[len] = '\0';
+                break;
+            }
+            len++;
+        }
+
+        /* If no newline was found, the line was too long; discard remaining chars */
+        if (len == BUFSIZE || buffer[len] == '\0') {
+            /* Check that we haven't already broken at newline (len < BUFSIZE and buffer[len] is not '\n') */
+            if (len < BUFSIZE && buffer[len] == '\0' && (len == 0 || buffer[len-1] != '\n')) {
+                int c;
+                while ((c = getchar()) != '\n' && c != EOF) { /* discard */ }
+            }
+        } else if (len == BUFSIZE) {
+            /* buffer was completely filled and no null terminator seen (should not happen with fgets, but robustly handle) */
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) { /* discard */ }
+        }
+
+        /* Compare safely using length-limited comparison */
+        if (strncmp(buffer, ""quit"", BUFSIZE) == 0 && buffer[4] == '\0') {
+            break;
+        }
+    }
+}"
+ISR-2,P10_input_loop,2,0.6444133520126343,1406,"void read_until_quit(void) {
+    const size_t BUFSIZE = 256;
+    char buffer[BUFSIZE];
+    size_t i;
+    int c;
+
+    while (1) {
+        printf(""Enter input ('quit' to exit): "");
+        fflush(stdout); /* ensure prompt is output immediately */
+
+        /* Read up to BUFSIZE-1 characters, stopping at newline or EOF */
+        i = 0;
+        while (i < BUFSIZE - 1) {
+            c = getchar();
+            if (c == '\n' || c == EOF) {
+                break;
+            }
+            buffer[i++] = (char)c;
+        }
+
+        /* If the loop stopped because the buffer filled without encountering
+         * a newline or EOF, discard the rest of the line. */
+        if (c != '\n' && c != EOF) {
+            int discard;
+            while ((discard = getchar()) != '\n' && discard != EOF) {
+                /* consume */
+            }
+            c = discard; /* update c to the terminating condition */
+        }
+
+        buffer[i] = '\0'; /* null-terminate the received data */
+
+        /* Check for read error or EOF */
+        if (c == EOF) {
+            if (feof(stdin)) {
+                printf(""EOF encountered. Exiting.\n"");
+            } else {
+                perror(""read error"");
+            }
+            break;
+        }
+
+        /* Check for exact ""quit"" command using length-limited comparison */
+        if (i == 4 && memcmp(buffer, ""quit"", 4) == 0) {
+            break;
+        }
+    }
+}"
+ISR-2,P10_input_loop,3,0.4804592728614807,2386,"void read_until_quit(void) {
+    const size_t BUFSIZE = 256;
+    char buffer[BUFSIZE];
+    size_t i;
+    int found_newline;
+    int eof_reached;
+    int error_occurred;
+    int buffer_full; /* set when user input exceeds BUFSIZE-1 */
+    char temp[128]; /* temporary chunk buffer for fread */
+
+    while (1) {
+        printf(""Enter input ('quit' to exit): "");
+        fflush(stdout);
+
+        i = 0;
+        buffer_full = 0;
+        found_newline = 0;
+        eof_reached = 0;
+        error_occurred = 0;
+
+        /* Read from stdin in chunks until newline, error, or EOF */
+        while (!found_newline && !eof_reached && !error_occurred) {
+            size_t nread = fread(temp, 1, sizeof(temp), stdin);
+            if (nread == 0) {
+                /* Handle error or EOF; fread returns 0 for either, and we must
+                 * distinguish them explicitly.
+                 */
+                if (ferror(stdin)) {
+                    error_occurred = 1;
+                } else if (feof(stdin)) {
+                    eof_reached = 1;
+                }
+                break;
+            }
+
+            /* Process each byte in the chunk */
+            for (size_t j = 0; j < nread; j++) {
+                if (temp[j] == '\n') {
+                    found_newline = 1;
+                    break; /* newline terminates the line, do not store it */
+                }
+                /* Store character if buffer is not yet full and within bounds */
+                if (!buffer_full) {
+                    if (i < BUFSIZE - 1) {
+                        buffer[i++] = temp[j];
+                    } else {
+                        buffer_full = 1; /* buffer reached maximum capacity */
+                    }
+                }
+                /* If buffer_full is set, we discard remaining bytes until newline/EOF */
+            }
+        }
+
+        /* Null-terminate the buffer safely, ensuring the index is within bounds */
+        if (i < BUFSIZE) {
+            buffer[i] = '\0';
+        } else {
+            buffer[BUFSIZE - 1] = '\0';
+        }
+
+        if (error_occurred) {
+            perror(""read error"");
+            break;
+        }
+        if (eof_reached) {
+            printf(""EOF encountered. Exiting.\n"");
+            break;
+        }
+        /* Check for exact ""quit"" command */
+        if (i == 4 && memcmp(buffer, ""quit"", 4) == 0) {
+            break;
+        }
+    }
+}"
+ISR-2,P11_struct_copy,0,0.0015067445347085595,627,"#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    int id;
+    char *data;
+} Record;
+
+Record *deep_copy_record(const Record *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    Record *dest = malloc(sizeof(Record));
+    if (dest == NULL) {
+        return NULL;
+    }
+
+    dest->id = src->id;
+
+    if (src->data == NULL) {
+        dest->data = NULL;
+    } else {
+        size_t len = strlen(src->data);
+        dest->data = malloc(len + 1);
+        if (dest->data == NULL) {
+            free(dest);
+            return NULL;
+        }
+        memcpy(dest->data, src->data, len + 1);
+    }
+
+    return dest;
+}"
+ISR-2,P11_struct_copy,1,0.004757823422551155,736,"#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    int id;
+    char *data;
+} Record;
+
+Record *deep_copy_record(const Record *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    Record *dest = malloc(sizeof(Record));
+    if (dest == NULL) {
+        return NULL;
+    }
+
+    dest->id = src->id;
+
+    if (src->data == NULL) {
+        dest->data = NULL;
+    } else {
+        size_t len = strlen(src->data);
+        dest->data = malloc(len + 1);
+        if (dest->data == NULL) {
+            free(dest);
+            dest = NULL;  // prevent potential use-after-free
+            return NULL;
+        }
+        memmove(dest->data, src->data, len + 1);  // safer for potentially overlapping regions
+    }
+
+    return dest;
+}"
+ISR-2,P11_struct_copy,2,0.0005237655132077634,639,"Record *deep_copy_record(const Record *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    Record *dest = malloc(sizeof(Record));
+    if (dest == NULL) {
+        return NULL;
+    }
+
+    dest->id = src->id;
+
+    if (src->data == NULL) {
+        dest->data = NULL;
+    } else {
+        size_t len = strlen(src->data);
+        dest->data = malloc(len + 1);
+        if (dest->data == NULL) {
+            free(dest);
+            dest = NULL;  // prevent potential use-after-free
+            return NULL;
+        }
+        memmove(dest->data, src->data, len + 1);  // safer for potentially overlapping regions
+    }
+
+    return dest;
+}"
+ISR-2,P12_recursive_free,0,5.6576540373498574e-05,193,"void free_tree(Node* root) {
+    if (root == NULL) return;
+    free_tree(root->left);
+    free_tree(root->right);
+    if (root->data != NULL) {
+        free(root->data);
+    }
+    free(root);
+}"
+ISR-2,P13_sprintf_use,0,0.0006127660744823515,1020,"#include <time.h>
+#include <stdio.h>
+#include <string.h>
+
+int format_log_message(char *buffer, size_t size, const char *level, const char *message)
+{
+    if (buffer == NULL || size == 0) {
+        return -1;
+    }
+
+    const char *safe_level = level ? level : ""INFO"";
+    const char *safe_message = message ? message : """";
+
+    time_t now = time(NULL);
+    if (now == (time_t)-1) {
+        return snprintf(buffer, size, ""[TIME_ERROR] [%s] %s"", safe_level, safe_message);
+    }
+
+    struct tm *local_tm = localtime(&now);
+    if (local_tm == NULL) {
+        return snprintf(buffer, size, ""[LOCALTIME_ERROR] [%s] %s"", safe_level, safe_message);
+    }
+
+    char time_str[64];
+    if (strftime(time_str, sizeof(time_str), ""%Y-%m-%d %H:%M:%S"", local_tm) == 0) {
+        return snprintf(buffer, size, ""[STRFTIME_ERROR] [%s] %s"", safe_level, safe_message);
+    }
+
+    int written = snprintf(buffer, size, ""[%s] [%s] %s"", time_str, safe_level, safe_message);
+    if (written < 0) {
+        return -1;
+    }
+    return written;
+}"
+ISR-2,P14_realloc_array,0,0.0005819596699438989,666,"int double_array_size(int **array, size_t *elem_count) {
+    // Validate pointers
+    if (array == NULL || elem_count == NULL || *array == NULL || *elem_count == 0) {
+        return -1;
+    }
+
+    // Check for overflow
+    size_t new_count = (*elem_count) * 2;
+    if (new_count < *elem_count) {
+        return -1;  // overflow occurred
+    }
+
+    // Reallocate (preserves existing values on success)
+    int *new_array = realloc(*array, new_count * sizeof(int));
+    if (new_array == NULL) {
+        return -1;  // realloc failed, original array stays valid
+    }
+
+    // Update caller's pointers
+    *array = new_array;
+    *elem_count = new_count;
+    return 0;
+}"
+ISR-2,P15_cmd_arg,0,0.017497602850198746,589,"#include <string.h>
+#include <stdlib.h>
+
+char* extract_output_filename(int argc, const char* argv[]) {
+    if (argc < 1 || argv == NULL)
+        return NULL;
+
+    for (int i = 1; i < argc - 1; i++) {
+        if (argv[i] != NULL && strcmp(argv[i], ""--output"") == 0) {
+            const char* filename = argv[i + 1];
+            if (filename != NULL && strlen(filename) > 0) {
+                return strdup(filename);
+            } else {
+                return NULL; /* empty or NULL filename */
+            }
+        }
+    }
+
+    return NULL; /* --output not found or missing filename */
+}"
+ISR-2,P15_cmd_arg,1,0.8714568614959717,1066,"#include <string.h>
+#include <stdlib.h>
+
+char* extract_output_filename(int argc, const char* argv[]) {
+    /* Ensure basic argument validity */
+    if (argc < 2 || argv == NULL)
+        return NULL;
+
+    /* argv[0] is conventionally the program name; verify it exists */
+    if (argv[0] == NULL)
+        return NULL;
+
+    /* Iterate through arguments, looking for ""--output"".
+     * Loop bound i < argc-1 guarantees i+1 is a valid index.
+     */
+    for (int i = 1; i < argc - 1; i++) {
+        /* Skip NULL entries (should not occur in standard argv, but guard anyway) */
+        if (argv[i] == NULL)
+            continue;
+
+        if (strcmp(argv[i], ""--output"") == 0) {
+            const char* filename = argv[i + 1];
+
+            /* Reject NULL or empty filenames */
+            if (filename == NULL || strlen(filename) == 0)
+                return NULL;
+
+            /* strdup safely duplicates the string; memory must be freed by caller */
+            return strdup(filename);
+        }
+    }
+
+    /* Option not found or no filename given */
+    return NULL;
+}"
+ISR-2,P15_cmd_arg,2,0.9174331426620483,1753,"#include <string.h>
+#include <stdlib.h>
+
+char* extract_output_filename(int argc, const char* argv[]) {
+    /* Ensure basic argument validity */
+    if (argc < 2 || argv == NULL)
+        return NULL;
+
+    /* argv[0] is conventionally the program name; verify it exists */
+    if (argv[0] == NULL)
+        return NULL;
+
+    /* Iterate through arguments, looking for ""--output"".
+     * Loop bound i < argc-1 guarantees i+1 is a valid index.
+     */
+    for (int i = 1; i < argc - 1; i++) {
+        /* Explicitly validate array index before using argv[i+1] */
+        if (i + 1 >= argc)
+            break;  /* Safety net; loop condition already ensures this */
+
+        /* Skip NULL entries (should not occur in standard argv, but guard anyway) */
+        if (argv[i] == NULL)
+            continue;
+
+        if (strcmp(argv[i], ""--output"") == 0) {
+            const char* filename = argv[i + 1];
+
+            /* Reject NULL or empty filenames */
+            if (filename == NULL || strlen(filename) == 0)
+                return NULL;
+
+            /* strdup safely duplicates the string; memory must be freed by caller */
+            char* dup = strdup(filename);
+            if (dup == NULL) {
+                /* If allocation failed, return NULL.
+                 * Caller should always set pointers to NULL after freeing
+                 * to prevent use-after-free vulnerabilities.
+                 */
+                return NULL;
+            }
+            /* NOTE: If this function is later extended to read the file (e.g., via fread),
+             * ensure to check the return value of fread() and handle partial reads properly.
+             */
+            return dup;
+        }
+    }
+
+    /* Option not found or no filename given */
+    return NULL;
+}"
+ISR-2,P15_cmd_arg,3,0.5518132448196411,3352,"#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+/*
+ * Extracts the filename following the ""--output"" argument,
+ * reads the entire content of that file into a dynamic buffer,
+ * and returns a pointer to it. The caller must free the buffer
+ * and set its pointer to NULL after freeing to prevent use‑after‑free.
+ *
+ * Returns NULL on any error (missing argument, invalid filename,
+ * empty filename, file open failure, read failure, or allocation failure).
+ */
+char* extract_output_filename(int argc, const char* argv[]) {
+    /* Ensure basic argument validity */
+    if (argc < 2 || argv == NULL)
+        return NULL;
+
+    /* argv[0] is conventionally the program name; verify it exists */
+    if (argv[0] == NULL)
+        return NULL;
+
+    /* Iterate through arguments, looking for ""--output"" */
+    for (int i = 1; i < argc - 1; i++) {
+        /* Validate array index before accessing argv[i+1] */
+        if (i + 1 >= argc)
+            break;
+
+        /* Skip NULL entries (guarding against unusual argv) */
+        if (argv[i] == NULL)
+            continue;
+
+        if (strcmp(argv[i], ""--output"") == 0) {
+            const char* filename = argv[i + 1];
+
+            /* Reject NULL or empty filenames */
+            if (filename == NULL || strlen(filename) == 0)
+                return NULL;
+
+            /* Open the file in binary read mode */
+            FILE* fp = fopen(filename, ""rb"");
+            if (fp == NULL)
+                return NULL;
+
+            /* Determine file size (seek to end, query position, rewind) */
+            if (fseek(fp, 0, SEEK_END) != 0) {
+                fclose(fp);
+                return NULL;
+            }
+            long file_size = ftell(fp);
+            if (file_size < 0) {
+                fclose(fp);
+                return NULL;
+            }
+            rewind(fp);
+
+            /* Allocate buffer for file content + 1 for null terminator */
+            char* buffer = (char*)malloc((size_t)file_size + 1);
+            if (buffer == NULL) {
+                fclose(fp);
+                return NULL;
+            }
+
+            /* Read the file in chunks, handling partial reads properly */
+            size_t total_read = 0;
+            while (total_read < (size_t)file_size) {
+                size_t bytes_to_read = (size_t)file_size - total_read;
+                size_t bytes_read = fread(buffer + total_read, 1, bytes_to_read, fp);
+
+                /* Check fread return value: zero means EOF or error */
+                if (bytes_read == 0) {
+                    if (ferror(fp)) {
+                        free(buffer);
+                        buffer = NULL;  /* prevent use-after-free */
+                        fclose(fp);
+                        return NULL;
+                    } else {
+                        /* Unexpected EOF before reading expected size */
+                        free(buffer);
+                        buffer = NULL;
+                        fclose(fp);
+                        return NULL;
+                    }
+                }
+                total_read += bytes_read;
+            }
+
+            fclose(fp);
+            buffer[total_read] = '\0';  /* null-terminate */
+
+            /* Success - caller must free buffer and then set pointer to NULL */
+            return buffer;
+        }
+    }
+
+    /* Option not found or no filename given */
+    return NULL;
+}"

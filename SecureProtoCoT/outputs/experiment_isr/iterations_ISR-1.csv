@@ -1,0 +1,1665 @@
+ablation_id,prompt_id,iteration,p_vul,code_len,code
+ISR-1,P01_buffer_copy,0,0.00013938146003056318,283,"char *safe_strcpy(char *dest, const char *src, size_t dsize) {
+    if (dest == NULL || src == NULL || dsize == 0) {
+        return NULL;
+    }
+    size_t i;
+    for (i = 0; i < dsize - 1 && src[i] != '\0'; i++) {
+        dest[i] = src[i];
+    }
+    dest[i] = '\0';
+    return dest;
+}"
+ISR-1,P02_array_access,0,0.0011137212859466672,347,"int get_element(const int *array, size_t size, size_t index) {
+    if (array == NULL || size == 0 || index >= size) {
+        fprintf(stderr, ""get_element: invalid array, size, or index (index=%zu, size=%zu)\n"",
+                index, size);
+        return -1;  // error sentinel (caller should check return value)
+    }
+    return array[index];
+}"
+ISR-1,P02_array_access,1,0.0002852398611139506,583,"int get_element(const int *array, size_t size, size_t index) {
+    if (array == NULL) {
+        fprintf(stderr, ""get_element: NULL array pointer\n"");
+        return -1;
+    }
+
+    /* Prevent potential overflow when computing the end pointer */
+    if (size == 0 || size > SIZE_MAX / sizeof(int)) {
+        fprintf(stderr, ""get_element: invalid size (%zu)\n"", size);
+        return -1;
+    }
+
+    if (index >= size) {
+        fprintf(stderr, ""get_element: index out of bounds (index=%zu, size=%zu)\n"",
+                index, size);
+        return -1;
+    }
+
+    return array[index];
+}"
+ISR-1,P03_memory_alloc,0,7.306124462047592e-05,138,"#include <stdlib.h>
+
+int *allocate_int_array(size_t n) {
+    if (n == 0) {
+        return NULL;
+    }
+    return calloc(n, sizeof(int));
+}"
+ISR-1,P04_string_concat,0,4.59279035567306e-05,374,"char *concat_strings(const char *s1, const char *s2) {
+    size_t len1 = s1 ? strlen(s1) : 0;
+    size_t len2 = s2 ? strlen(s2) : 0;
+    char *result = malloc(len1 + len2 + 1);
+    if (!result) return NULL;
+
+    if (s1) memcpy(result, s1, len1);
+    if (s2) {
+        memcpy(result + len1, s2, len2 + 1);
+    } else {
+        result[len1] = '\0';
+    }
+
+    return result;
+}"
+ISR-1,P05_free_memory,0,0.0001473458978580311,120,"void free_and_null(void **ptr) {
+    if (ptr != NULL && *ptr != NULL) {
+        free(*ptr);
+        *ptr = NULL;
+    }
+}"
+ISR-1,P06_file_read,0,0.41421374678611755,2340,"#include <stdio.h>
+#include <stdlib.h>
+
+/**
+ * Reads the entire contents of a file into a dynamically allocated buffer.
+ * The buffer is null-terminated and must be freed by the caller.
+ * 
+ * @param filename Path to the file to read.
+ * @return Pointer to the allocated buffer on success, or NULL on error.
+ */
+char *read_file(const char *filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+
+    FILE *fp = fopen(filename, ""rb"");
+    if (fp == NULL) {
+        return NULL;
+    }
+
+    size_t capacity = 4096;  /* Initial buffer size */
+    char *buffer = malloc(capacity);
+    if (buffer == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t total = 0;  /* Total bytes read */
+
+    while (1) {
+        size_t space = capacity - total;
+        size_t bytes = fread(buffer + total, 1, space, fp);
+        total += bytes;
+
+        if (bytes < space) {
+            if (feof(fp)) {
+                break;  /* Successfully reached end of file */
+            } else {
+                /* Read error occurred */
+                free(buffer);
+                fclose(fp);
+                return NULL;
+            }
+        }
+
+        /* Buffer is full, need to expand */
+        if (total == capacity) {
+            size_t new_capacity;
+            if (capacity > SIZE_MAX / 2) {
+                /* Doubling would overflow, increase linearly */
+                new_capacity = capacity + 4096;
+                if (new_capacity <= capacity) {
+                    /* Overflow: file too large to handle */
+                    free(buffer);
+                    fclose(fp);
+                    return NULL;
+                }
+            } else {
+                new_capacity = capacity * 2;
+            }
+
+            char *new_buffer = realloc(buffer, new_capacity);
+            if (new_buffer == NULL) {
+                free(buffer);
+                fclose(fp);
+                return NULL;
+            }
+            buffer = new_buffer;
+            capacity = new_capacity;
+        }
+    }
+
+    /* At this point, total < capacity (last read was partial). Null-terminate */
+    buffer[total] = '\0';
+
+    /* Optionally shrink buffer to exact size; if realloc fails, keep original */
+    char *shrunk = realloc(buffer, total + 1);
+    if (shrunk != NULL) {
+        buffer = shrunk;
+    }
+
+    fclose(fp);
+    return buffer;
+}"
+ISR-1,P06_file_read,1,0.5553447604179382,3666,"#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_DATA_SIZE (1024UL * 1024UL * 1024UL)   /* 1 GiB maximum file data */
+#define MAX_BUFFER_SIZE (MAX_DATA_SIZE + 1)         /* reserve 1 for '\0' */
+
+/**
+ * Reads the entire contents of a file into a dynamically allocated buffer.
+ * The buffer is null-terminated and must be freed by the caller.
+ *
+ * @param filename Path to the file to read.
+ * @return Pointer to the allocated buffer on success, or NULL on error.
+ */
+char *read_file(const char *filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+
+    FILE *fp = fopen(filename, ""rb"");
+    if (fp == NULL) {
+        return NULL;
+    }
+
+    size_t capacity = 4096;   /* initial buffer size */
+    char *buffer = malloc(capacity);
+    if (buffer == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t total = 0;        /* bytes actually read */
+    int error_occurred = 0;
+
+    while (1) {
+        /* usable bytes left (excluding the reserved null terminator) */
+        size_t data_space = capacity - 1 - total;
+
+        if (data_space == 0) {
+            /* buffer is full – need to expand or check limit */
+            if (total >= MAX_DATA_SIZE) {
+                /* limit reached; try to read one more byte to see if file continues */
+                char dummy;
+                size_t r = fread(&dummy, 1, 1, fp);
+                if (r == 1) {
+                    /* file exceeds maximum allowed size */
+                    error_occurred = 1;
+                }
+                break;
+            }
+
+            /* expand the buffer without reading yet */
+            size_t new_capacity;
+            if (capacity > MAX_BUFFER_SIZE / 2) {
+                /* near limit – linear growth */
+                if (capacity > MAX_BUFFER_SIZE - 4096) {
+                    /* cannot expand without exceeding MAX_BUFFER_SIZE */
+                    new_capacity = MAX_BUFFER_SIZE;
+                } else {
+                    new_capacity = capacity + 4096;
+                }
+            } else {
+                /* safe to double */
+                new_capacity = capacity * 2;
+                if (new_capacity > MAX_BUFFER_SIZE) {
+                    new_capacity = MAX_BUFFER_SIZE;
+                }
+            }
+
+            /* check for overflow or no progress */
+            if (new_capacity <= capacity) {
+                error_occurred = 1;
+                break;
+            }
+
+            char *new_buffer = realloc(buffer, new_capacity);
+            if (new_buffer == NULL) {
+                error_occurred = 1;
+                break;
+            }
+
+            buffer = new_buffer;
+            capacity = new_capacity;
+            continue;   /* loop again so that data_space is recomputed */
+        }
+
+        /* read as much as we have room for */
+        size_t bytes = fread(buffer + total, 1, data_space, fp);
+        total += bytes;
+
+        if (bytes < data_space) {
+            /* reached end of file or encountered an error */
+            if (ferror(fp)) {
+                error_occurred = 1;
+            }
+            break;
+        }
+
+        /* if bytes == data_space and total still < capacity-1, the loop will make data_space > 0
+           and keep reading; if total has reached capacity-1, next iteration will handle expansion */
+    }
+
+    fclose(fp);
+
+    if (error_occurred) {
+        free(buffer);
+        return NULL;
+    }
+
+    /* total is guaranteed to be < capacity, so buffer[total] is safe */
+    buffer[total] = '\0';
+
+    /* optionally shrink the buffer to exactly fit */
+    char *shrunk = realloc(buffer, total + 1);
+    if (shrunk != NULL) {
+        buffer = shrunk;
+    }
+
+    return buffer;
+}"
+ISR-1,P06_file_read,2,0.3545213043689728,3063,"char *read_file(const char *filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+
+    FILE *fp = fopen(filename, ""rb"");
+    if (fp == NULL) {
+        return NULL;
+    }
+
+    size_t capacity = 4096;
+    char *buffer = malloc(capacity);
+    if (buffer == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t total = 0;
+    int error_occurred = 0;
+
+    while (!error_occurred) {
+        /* Maximum allowed data size reached? */
+        if (total >= MAX_DATA_SIZE) {
+            /* Try to read one more byte to see if file continues */
+            char dummy;
+            size_t r = fread(&dummy, 1, 1, fp);
+            if (r == 1) {
+                error_occurred = 1;
+            }
+            break;
+        }
+
+        /* Usable space in buffer (leave room for null terminator) */
+        size_t space = capacity - 1 - total;
+
+        if (space == 0) {
+            /* Buffer is full, expand it (up to MAX_BUFFER_SIZE) */
+            if (capacity >= MAX_BUFFER_SIZE) {
+                error_occurred = 1;
+                break;
+            }
+
+            size_t new_capacity = capacity;
+            if (capacity > MAX_BUFFER_SIZE / 2) {
+                /* Near limit – linear growth */
+                if (capacity > MAX_BUFFER_SIZE - 4096) {
+                    new_capacity = MAX_BUFFER_SIZE;
+                } else {
+                    new_capacity = capacity + 4096;
+                }
+            } else {
+                /* Double, but guard against overflow */
+                if (capacity > SIZE_MAX / 2) {
+                    new_capacity = SIZE_MAX;
+                } else {
+                    new_capacity = capacity * 2;
+                }
+                if (new_capacity > MAX_BUFFER_SIZE) {
+                    new_capacity = MAX_BUFFER_SIZE;
+                }
+            }
+
+            if (new_capacity <= capacity) {
+                error_occurred = 1;
+                break;
+            }
+
+            char *new_buffer = realloc(buffer, new_capacity);
+            if (new_buffer == NULL) {
+                error_occurred = 1;
+                break;
+            }
+
+            buffer = new_buffer;
+            capacity = new_capacity;
+            continue;
+        }
+
+        /* Read up to min(space, remaining allowed bytes) */
+        size_t max_to_read = space;
+        if (total + max_to_read > MAX_DATA_SIZE) {
+            max_to_read = MAX_DATA_SIZE - total;
+        }
+
+        size_t bytes = fread(buffer + total, 1, max_to_read, fp);
+        total += bytes;
+
+        if (bytes < max_to_read) {
+            if (ferror(fp)) {
+                error_occurred = 1;
+            }
+            break;
+        }
+        /* If we read the full requested amount, loop again */
+    }
+
+    fclose(fp);
+
+    if (error_occurred) {
+        free(buffer);
+        return NULL;
+    }
+
+    /* Null-terminate (total < capacity guaranteed) */
+    buffer[total] = '\0';
+
+    /* Try to shrink to exact size */
+    char *shrunk = realloc(buffer, total + 1);
+    if (shrunk != NULL) {
+        buffer = shrunk;
+    }
+
+    return buffer;
+}"
+ISR-1,P06_file_read,3,0.4123654067516327,2350,"char *read_file(const char *filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+
+    FILE *fp = fopen(filename, ""rb"");
+    if (fp == NULL) {
+        return NULL;
+    }
+
+    size_t capacity = 4096;
+    char *buffer = malloc(capacity);
+    if (buffer == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t total = 0;
+    int error_occurred = 0;
+
+    while (!error_occurred) {
+        if (total >= MAX_DATA_SIZE) {
+            char dummy;
+            if (fread(&dummy, 1, 1, fp) == 1) {
+                error_occurred = 1;
+            }
+            break;
+        }
+
+        size_t space = capacity - 1 - total;
+        if (space == 0) {
+            if (capacity >= MAX_BUFFER_SIZE) {
+                error_occurred = 1;
+                break;
+            }
+
+            size_t new_cap = capacity;
+            if (capacity > MAX_BUFFER_SIZE / 2) {
+                if (capacity > MAX_BUFFER_SIZE - 4096) {
+                    new_cap = MAX_BUFFER_SIZE;
+                } else {
+                    new_cap = capacity + 4096;
+                }
+            } else {
+                if (capacity > SIZE_MAX / 2) {
+                    new_cap = SIZE_MAX;
+                } else {
+                    new_cap = capacity * 2;
+                }
+                if (new_cap > MAX_BUFFER_SIZE) {
+                    new_cap = MAX_BUFFER_SIZE;
+                }
+            }
+            if (new_cap <= capacity) {
+                error_occurred = 1;
+                break;
+            }
+            char *new_buffer = realloc(buffer, new_cap);
+            if (new_buffer == NULL) {
+                error_occurred = 1;
+                break;
+            }
+            buffer = new_buffer;
+            capacity = new_cap;
+            continue;
+        }
+
+        size_t remaining = MAX_DATA_SIZE - total;
+        size_t to_read = (space < remaining) ? space : remaining;
+        size_t n = fread(buffer + total, 1, to_read, fp);
+        total += n;
+        if (n < to_read) {
+            if (ferror(fp)) {
+                error_occurred = 1;
+            }
+            break;
+        }
+    }
+
+    fclose(fp);
+
+    if (error_occurred) {
+        free(buffer);
+        return NULL;
+    }
+
+    buffer[total] = '\0';
+    char *shrunk = realloc(buffer, total + 1);
+    if (shrunk != NULL) {
+        buffer = shrunk;
+    }
+    return buffer;
+}"
+ISR-1,P06_file_read,4,0.3774101138114929,2029,"char *read_file(const char *filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+
+    FILE *fp = fopen(filename, ""rb"");
+    if (fp == NULL) {
+        return NULL;
+    }
+
+    size_t capacity = 4096;
+    char *buffer = malloc(capacity);
+    if (buffer == NULL) {
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t total = 0;
+    int error_occurred = 0;
+
+    while (!error_occurred) {
+        if (total >= MAX_DATA_SIZE) {
+            char dummy;
+            if (fread(&dummy, 1, 1, fp) == 1) {
+                error_occurred = 1;
+            }
+            break;
+        }
+
+        size_t space = capacity - 1 - total;
+        if (space == 0) {
+            if (capacity >= MAX_BUFFER_SIZE) {
+                error_occurred = 1;
+                break;
+            }
+
+            size_t new_cap;
+            if (capacity > SIZE_MAX / 2) {
+                new_cap = SIZE_MAX;
+            } else {
+                new_cap = capacity * 2;
+            }
+            if (new_cap > MAX_BUFFER_SIZE) {
+                new_cap = MAX_BUFFER_SIZE;
+            }
+            if (new_cap <= capacity) {
+                error_occurred = 1;
+                break;
+            }
+
+            char *new_buffer = realloc(buffer, new_cap);
+            if (new_buffer == NULL) {
+                error_occurred = 1;
+                break;
+            }
+            buffer = new_buffer;
+            capacity = new_cap;
+            continue;
+        }
+
+        size_t remaining = MAX_DATA_SIZE - total;
+        size_t to_read = (space < remaining) ? space : remaining;
+        size_t n = fread(buffer + total, 1, to_read, fp);
+        total += n;
+        if (n < to_read) {
+            if (ferror(fp)) {
+                error_occurred = 1;
+            }
+            break;
+        }
+    }
+
+    fclose(fp);
+
+    if (error_occurred) {
+        free(buffer);
+        return NULL;
+    }
+
+    buffer[total] = '\0';
+    char *shrunk = realloc(buffer, total + 1);
+    if (shrunk != NULL) {
+        buffer = shrunk;
+    }
+    return buffer;
+}"
+ISR-1,P07_int_parse,0,0.06732486188411713,1120,"#include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+
+int parse_int(const char *str, int *value) {
+    if (str == NULL || value == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Skip leading whitespace */
+    while (isspace((unsigned char)*str)) str++;
+
+    if (*str == '\0') {
+        /* Empty or whitespace-only string */
+        errno = EINVAL;
+        return -1;
+    }
+
+    char *endptr;
+    errno = 0;
+    long val = strtol(str, &endptr, 10);
+
+    if (errno == ERANGE) {
+        /* Overflow in long (very large magnitude) */
+        return -1;
+    }
+    if (endptr == str) {
+        /* No digits were found */
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Allow trailing whitespace */
+    while (isspace((unsigned char)*endptr)) endptr++;
+    if (*endptr != '\0') {
+        /* Extra non-whitespace characters after the number */
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Check if the parsed long fits into an int */
+    if (val > INT_MAX || val < INT_MIN) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    *value = (int)val;
+    return 0;
+}"
+ISR-1,P07_int_parse,1,0.3482658863067627,1136,"int parse_int(const char *str, int *value) {
+    if (str == NULL || value == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Limit input length to prevent excessive resource consumption */
+    const char *s = str;
+    int len = 0;
+    while (*s != '\0') {
+        if (++len > 1024) {
+            errno = EINVAL;
+            return -1;
+        }
+        s++;
+    }
+
+    /* Skip leading whitespace */
+    while (isspace((unsigned char)*str)) str++;
+
+    if (*str == '\0') {
+        /* Empty or whitespace-only string */
+        errno = EINVAL;
+        return -1;
+    }
+
+    char *endptr;
+    errno = 0;
+    long val = strtol(str, &endptr, 10);
+
+    if (errno == ERANGE) {
+        return -1;
+    }
+    if (endptr == str) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Allow trailing whitespace */
+    while (isspace((unsigned char)*endptr)) endptr++;
+    if (*endptr != '\0') {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Check if the parsed long fits into an int */
+    if (val > INT_MAX || val < INT_MIN) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    *value = (int)val;
+    return 0;
+}"
+ISR-1,P07_int_parse,2,0.35209921002388,1153,"int parse_int(const char *str, int *value) {
+    if (str == NULL || value == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Limit input length to prevent excessive resource consumption */
+    const char *s = str;
+    size_t len = 0;
+    while (*s != '\0') {
+        if (len >= 1024) {
+            errno = EINVAL;
+            return -1;
+        }
+        len++;
+        s++;
+    }
+
+    /* Skip leading whitespace */
+    while (isspace((unsigned char)*str)) str++;
+
+    if (*str == '\0') {
+        /* Empty or whitespace-only string */
+        errno = EINVAL;
+        return -1;
+    }
+
+    char *endptr;
+    errno = 0;
+    long val = strtol(str, &endptr, 10);
+
+    if (errno == ERANGE) {
+        return -1;
+    }
+    if (endptr == str) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Allow trailing whitespace */
+    while (isspace((unsigned char)*endptr)) endptr++;
+    if (*endptr != '\0') {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Check if the parsed long fits into an int */
+    if (val > INT_MAX || val < INT_MIN) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    *value = (int)val;
+    return 0;
+}"
+ISR-1,P07_int_parse,3,0.37097564339637756,1373,"#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+
+int parse_int(const char *str, int *value) {
+    if (str == NULL || value == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Determine length safely without reading beyond a reasonable limit */
+    size_t len = strnlen(str, 1025);
+    if (len >= 1025) {   /* input too long or not correctly terminated */
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Work on a local copy to avoid any TOCTOU or non-terminated risks */
+    char buf[1025];
+    memcpy(buf, str, len);
+    buf[len] = '\0';
+
+    /* Skip leading whitespace */
+    char *p = buf;
+    while (isspace((unsigned char)*p)) {
+        p++;
+    }
+
+    if (*p == '\0') {
+        /* Only whitespace or empty */
+        errno = EINVAL;
+        return -1;
+    }
+
+    char *endptr;
+    errno = 0;
+    long val = strtol(p, &endptr, 10);
+
+    if (errno == ERANGE) {
+        return -1;
+    }
+    if (endptr == p) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Allow trailing whitespace */
+    while (isspace((unsigned char)*endptr)) {
+        endptr++;
+    }
+    if (*endptr != '\0') {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* Ensure the value fits in an int */
+    if (val > INT_MAX || val < INT_MIN) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    *value = (int)val;
+    return 0;
+}"
+ISR-1,P08_linked_list,0,0.0025953599251806736,649,"typedef struct Node {
+    int data;
+    struct Node* next;
+} Node;
+
+/**
+ * @brief Insert a new node with given data at the head of the linked list.
+ * @param head Double pointer to the head of the list.
+ * @param data Integer value to store in the new node.
+ * @return Pointer to the newly created node, or NULL on failure.
+ */
+Node* insertAtHead(Node** head, int data) {
+    if (head == NULL) {
+        return NULL;
+    }
+
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        return NULL; /* Allocation failure */
+    }
+
+    newNode->data = data;
+    newNode->next = *head;
+    *head = newNode;
+
+    return newNode;
+}"
+ISR-1,P08_linked_list,1,0.0001296720001846552,415,"Node* insertAtHead(Node** head, int data) {
+    if (head == NULL) {
+        return NULL; // Invalid input parameter
+    }
+
+    // Use calloc to zero-initialize memory, mitigating information leaks
+    Node* newNode = calloc(1, sizeof(Node));
+    if (newNode == NULL) {
+        return NULL; // Allocation failure
+    }
+
+    newNode->data = data;
+    newNode->next = *head;
+    *head = newNode;
+
+    return newNode;
+}"
+ISR-1,P09_memcpy_wrapper,0,0.00040752883069217205,577,"void *safe_memmove(void *dest, const void *src, size_t n) {
+    if (!dest || !src) return NULL;
+    if (n == 0 || dest == src) return dest;
+
+    unsigned char *d = (unsigned char *)dest;
+    const unsigned char *s = (const unsigned char *)src;
+
+    if (d < s) {
+        // Copy forward when destination is before source
+        for (size_t i = 0; i < n; i++) {
+            d[i] = s[i];
+        }
+    } else {
+        // Copy backward when destination is after source
+        for (size_t i = n; i != 0; i--) {
+            d[i - 1] = s[i - 1];
+        }
+    }
+
+    return dest;
+}"
+ISR-1,P10_input_loop,0,0.027471212670207024,578,"void read_until_quit(void) {
+    char buffer[256];
+    while (1) {
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            if (ferror(stdin)) {
+                perror(""fgets failed"");
+            }
+            break;
+        }
+        char *newline = strchr(buffer, '\n');
+        if (newline) {
+            *newline = '\0';
+        } else {
+            /* Input too long, discard rest of line */
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+        }
+        if (strcmp(buffer, ""quit"") == 0) {
+            break;
+        }
+    }
+}"
+ISR-1,P10_input_loop,1,0.29859405755996704,953,"void read_until_quit(void) {
+    char buffer[256];
+    while (1) {
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            /* NULL indicates EOF or error */
+            if (ferror(stdin)) {
+                perror(""fgets failed"");
+            }
+            break;
+        }
+        /* Trim trailing newline if present */
+        char *newline = strchr(buffer, '\n');
+        if (newline != NULL) {
+            *newline = '\0';
+        } else {
+            /* Input too long for buffer; discard rest of line */
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {
+                /* intentionally empty: consume character */
+            }
+            if (c == EOF && ferror(stdin)) {
+                perror(""getchar failed"");
+                break;  /* exit on read error */
+            }
+        }
+        /* Check for exit command */
+        if (strcmp(buffer, ""quit"") == 0) {
+            break;
+        }
+    }
+}"
+ISR-1,P10_input_loop,2,0.6262014508247375,1404,"void read_until_quit(void) {
+    char buffer[256];
+    while (1) {
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            /* NULL indicates EOF or error */
+            if (ferror(stdin)) {
+                perror(""fgets failed"");
+            }
+            break;
+        }
+        /* Trim trailing newline if present */
+        char *newline = strchr(buffer, '\n');
+        if (newline != NULL) {
+            *newline = '\0';
+        } else {
+            /* Input too long for buffer; discard up to a safe limit */
+            int c;
+            int discarded = 0;
+            const int MAX_DISCARD = 8192; /* safety limit to prevent endless discard */
+
+            while ((c = getchar()) != '\n' && c != EOF) {
+                if (++discarded >= MAX_DISCARD) {
+                    fprintf(stderr, ""Input line exceeds maximum length, aborting\n"");
+                    /* Potential endless stream – abort the entire read loop */
+                    return;
+                }
+            }
+            if (c == EOF) {
+                if (ferror(stdin)) {
+                    perror(""getchar failed"");
+                    break;  /* read error, exit loop */
+                }
+                /* EOF without error is acceptable, continue processing */
+            }
+        }
+        /* Check for exit command */
+        if (strcmp(buffer, ""quit"") == 0) {
+            break;
+        }
+    }
+}"
+ISR-1,P10_input_loop,3,0.6636037230491638,1027,"void read_until_quit(void) {
+    char buffer[256];
+    while (1) {
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            if (ferror(stdin)) {
+                perror(""fgets failed"");
+                clearerr(stdin);
+            }
+            break;
+        }
+
+        /* Remove trailing newline if present */
+        char *newline = strchr(buffer, '\n');
+        if (newline) {
+            *newline = '\0';
+        } else {
+            /* Input too long; discard remaining characters until newline or EOF */
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF)
+                ;
+            if (c == EOF) {
+                if (ferror(stdin)) {
+                    perror(""getchar failed"");
+                    clearerr(stdin);
+                    break;  /* read error, exit loop */
+                }
+                /* EOF without error: stream ended, next fgets will return NULL */
+            }
+        }
+
+        if (strcmp(buffer, ""quit"") == 0) {
+            break;
+        }
+    }
+}"
+ISR-1,P11_struct_copy,0,0.023791858926415443,1323,"#include <stdlib.h>
+#include <string.h>
+
+/**
+ * Example struct with a dynamically allocated string field.
+ */
+struct Person {
+    char *name;   /**< Dynamically allocated string */
+    int age;
+    /* additional fields would be deep-copied similarly */
+};
+
+/**
+ * Deep-copies a Person struct. Allocates a new struct and copies the dynamically
+ * allocated name field. Returns NULL on any allocation failure or if src is NULL.
+ *
+ * @param src pointer to the source Person (may be NULL)
+ * @return pointer to a newly allocated deep copy of src, or NULL on error
+ */
+struct Person* deep_copy_person(const struct Person *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    /* allocate new struct */
+    struct Person *dst = malloc(sizeof(*dst));
+    if (dst == NULL) {
+        return NULL;
+    }
+
+    /* deep copy the string field if it is not NULL */
+    if (src->name != NULL) {
+        size_t len = strlen(src->name);
+        dst->name = malloc(len + 1);
+        if (dst->name == NULL) {
+            free(dst);
+            return NULL;
+        }
+        memcpy(dst->name, src->name, len + 1);  /* includes terminating null */
+    } else {
+        dst->name = NULL;
+    }
+
+    /* copy remaining fields (non-dynamic, simple assignment) */
+    dst->age = src->age;
+    /* copy other fields here */
+
+    return dst;
+}"
+ISR-1,P11_struct_copy,1,0.37562257051467896,1578,"#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+/* Maximum allowed length for a person's name to prevent resource exhaustion */
+#define MAX_NAME_LEN 255
+
+/**
+ * Deep-copies a Person struct. Allocates a new struct and copies the dynamically
+ * allocated name field. Returns NULL on any allocation failure, NULL source,
+ * or if the name exceeds the safety limit.
+ *
+ * @param src pointer to the source Person (may be NULL)
+ * @return pointer to a newly allocated deep copy of src, or NULL on error
+ */
+struct Person* deep_copy_person(const struct Person *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    /* allocate memory for the new struct */
+    struct Person *dst = malloc(sizeof(*dst));
+    if (dst == NULL) {
+        return NULL;
+    }
+
+    /* deep copy the name field with length and overflow checks */
+    if (src->name != NULL) {
+        size_t len = strlen(src->name);
+
+        /* safety limit: reject excessively long names */
+        if (len > MAX_NAME_LEN) {
+            free(dst);
+            return NULL;
+        }
+
+        /* ensure integer does not overflow when adding 1 (len + 1) */
+        if (len == SIZE_MAX) {
+            free(dst);
+            return NULL;
+        }
+
+        dst->name = malloc(len + 1);
+        if (dst->name == NULL) {
+            free(dst);
+            return NULL;
+        }
+
+        /* copy the string including the null terminator */
+        memcpy(dst->name, src->name, len + 1);
+    } else {
+        dst->name = NULL;
+    }
+
+    /* copy other trivial fields */
+    dst->age = src->age;
+
+    return dst;
+}"
+ISR-1,P11_struct_copy,2,0.004978862125426531,1169,"#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#define MAX_NAME_LEN 255
+
+struct Person* deep_copy_person(const struct Person *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    /* Allocate and zero-initialize the new struct to avoid uninitialized fields. */
+    struct Person *dst = calloc(1, sizeof(*dst));
+    if (dst == NULL) {
+        return NULL;
+    }
+
+    if (src->name != NULL) {
+        /* Use strnlen to safely measure the name without risking a read overflow
+         * if the source string is not properly null-terminated. */
+        size_t len = strnlen(src->name, MAX_NAME_LEN + 1);
+
+        /* Reject names that are too long or lack a null terminator within the limit. */
+        if (len > MAX_NAME_LEN) {
+            free(dst);
+            return NULL;
+        }
+
+        /* len is at most MAX_NAME_LEN, so len + 1 cannot overflow a size_t. */
+        dst->name = malloc(len + 1);
+        if (dst->name == NULL) {
+            free(dst);
+            return NULL;
+        }
+
+        memcpy(dst->name, src->name, len + 1);
+    }
+    /* else dst->name is already NULL thanks to calloc */
+
+    dst->age = src->age;
+
+    return dst;
+}"
+ISR-1,P11_struct_copy,3,0.009211824275553226,1063,"#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#define MAX_NAME_LEN 255
+
+struct Person* deep_copy_person(const struct Person *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    struct Person *dst = calloc(1, sizeof(*dst));
+    if (dst == NULL) {
+        return NULL;
+    }
+
+    if (src->name != NULL) {
+        size_t len = 0;
+        /* Safely determine length of source string without using non-standard strnlen */
+        while (len <= MAX_NAME_LEN && src->name[len] != '\0') {
+            len++;
+        }
+
+        /* Reject if name is too long or not null-terminated within the allowed range */
+        if (len > MAX_NAME_LEN) {
+            free(dst);
+            return NULL;
+        }
+
+        dst->name = malloc(len + 1);
+        if (dst->name == NULL) {
+            free(dst);
+            return NULL;
+        }
+
+        /* len+1 bytes include the null terminator */
+        memcpy(dst->name, src->name, len + 1);
+    }
+    /* If name was NULL, dst->name remains NULL due to calloc */
+
+    dst->age = src->age;
+
+    return dst;
+}"
+ISR-1,P11_struct_copy,4,0.4222683310508728,1325,"#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#define MAX_NAME_LEN 255
+
+struct Person* deep_copy_person(const struct Person *src) {
+    if (src == NULL) {
+        return NULL;
+    }
+
+    struct Person *dst = calloc(1, sizeof(*dst));
+    if (dst == NULL) {
+        return NULL;
+    }
+
+    if (src->name != NULL) {
+        size_t len = 0;
+        /* Safely determine length up to MAX_NAME_LEN characters.
+         * Reading only indices 0..MAX_NAME_LEN-1 avoids any out-of-bounds
+         * access even if the source buffer is exactly MAX_NAME_LEN bytes
+         * and lacks a null terminator. Maximum allowed string length is
+         * (MAX_NAME_LEN - 1). */
+        while (len < MAX_NAME_LEN && src->name[len] != '\0') {
+            len++;
+        }
+
+        if (len == MAX_NAME_LEN) {
+            /* No null terminator found within the allowed limit */
+            free(dst);
+            return NULL;
+        }
+
+        dst->name = malloc(len + 1);
+        if (dst->name == NULL) {
+            free(dst);
+            return NULL;
+        }
+        /* Copy the null-terminated string (len+1 bytes) */
+        memcpy(dst->name, src->name, len + 1);
+    } else {
+        /* calloc already zeroed dst->name, but explicit NULL is fine */
+        dst->name = NULL;
+    }
+
+    dst->age = src->age;
+    return dst;
+}"
+ISR-1,P12_recursive_free,0,0.00017860681691672653,209,"void free_tree(Node *root) {
+    if (root == NULL) {
+        return;
+    }
+    free_tree(root->left);
+    free_tree(root->right);
+    if (root->data != NULL) {
+        free(root->data);
+    }
+    free(root);
+}"
+ISR-1,P13_sprintf_use,0,0.5817933082580566,1482,"/**
+ * Formats a log message with a timestamp, log level, and user message.
+ * Requires: <time.h>, <string.h>, <stdio.h>
+ *
+ * @param buffer      Destination buffer for the formatted message.
+ * @param buffer_size Size of the destination buffer (including space for null terminator).
+ * @param level       Log level string (e.g., ""DEBUG"", ""INFO"", ""WARN"", ""ERROR"").
+ * @param message     User-provided message string.
+ * @return  Number of characters written to buffer (excluding null terminator) on success,
+ *          or a negative error code:
+ *          -1: invalid argument (NULL pointer or zero buffer size)
+ *          -2: time retrieval or formatting failure
+ *          -3: output truncated (buffer too small) or snprintf error
+ */
+int format_log_message(char *buffer, size_t buffer_size, const char *level, const char *message) {
+    if (buffer == NULL || buffer_size == 0 || level == NULL || message == NULL) {
+        return -1;
+    }
+
+    time_t now = time(NULL);
+    if (now == (time_t)-1) {
+        return -2;
+    }
+
+    struct tm tm_info;
+    if (localtime_r(&now, &tm_info) == NULL) {
+        return -2;
+    }
+
+    char timebuf[20]; // ""YYYY-MM-DD HH:MM:SS"" plus null terminator
+    if (strftime(timebuf, sizeof(timebuf), ""%Y-%m-%d %H:%M:%S"", &tm_info) == 0) {
+        return -2;
+    }
+
+    int ret = snprintf(buffer, buffer_size, ""[%s] [%s] %s"", timebuf, level, message);
+    if (ret < 0 || (size_t)ret >= buffer_size) {
+        return -3;
+    }
+
+    return ret;
+}"
+ISR-1,P13_sprintf_use,1,0.0005501185078173876,695,"int format_log_message(char *buffer, size_t buffer_size, const char *level, const char *message) {
+    if (buffer == NULL || buffer_size == 0 || level == NULL || message == NULL) {
+        return -1;
+    }
+
+    time_t now = time(NULL);
+    if (now == (time_t)-1) {
+        return -2;
+    }
+
+    struct tm tm_info;
+    if (localtime_r(&now, &tm_info) == NULL) {
+        return -2;
+    }
+
+    char timebuf[64];
+    if (strftime(timebuf, sizeof(timebuf), ""%Y-%m-%d %H:%M:%S"", &tm_info) == 0) {
+        return -2;
+    }
+
+    int ret = snprintf(buffer, buffer_size, ""[%s] [%s] %s"", timebuf, level, message);
+    if (ret < 0 || (size_t)ret >= buffer_size) {
+        return -3;
+    }
+
+    return ret;
+}"
+ISR-1,P14_realloc_array,0,0.0013723326846957207,626,"#include <stdlib.h>
+#include <stdint.h>
+
+int* double_array_size(int* arr, int current_size) {
+    /* Ensure current_size is meaningful */
+    if (current_size <= 0) {
+        return NULL;
+    }
+
+    /* Prevent arithmetic overflow when computing new size */
+    size_t cur = (size_t)current_size;
+    if (cur > (SIZE_MAX / sizeof(int)) / 2) {
+        return NULL;  /* would overflow */
+    }
+    size_t new_size = cur * 2;
+
+    /* realloc preserves existing values and handles NULL arr gracefully */
+    int* new_arr = realloc(arr, new_size * sizeof(int));
+    return new_arr;  /* NULL on failure, original arr still valid */
+}"
+ISR-1,P14_realloc_array,1,0.8436210751533508,1937,"#include <stdlib.h>
+#include <stdint.h>
+
+/**
+ * Safely attempts to double the size of a dynamically allocated array.
+ * 
+ * @param arr         Pointer to the current array (may be NULL).
+ * @param current_size Current number of elements in the array.
+ * @return            New array pointer on success, NULL on failure.
+ *                    On failure, the original 'arr' remains valid and must be
+ *                    freed by the caller if no longer needed.
+ */
+int* double_array_size(int* arr, int current_size) {
+    /* Reject non-positive sizes as invalid */
+    if (current_size <= 0) {
+        return NULL;
+    }
+
+    /* Convert to unsigned to safely perform size arithmetic */
+    size_t cur = (size_t)current_size;
+
+    /* 
+     * Check for overflow when computing the number of elements after doubling.
+     * We must ensure that `cur * 2` does not overflow size_t.
+     */
+    if (cur > SIZE_MAX / 2) {
+        return NULL;
+    }
+    size_t new_elements = cur * 2;
+
+    /* 
+     * Guard against multiplication overflow when computing total byte size.
+     * Condition: cur * 2 * sizeof(int) > SIZE_MAX  -->  
+     *            cur > (SIZE_MAX / sizeof(int)) / 2
+     * This check is independent and protects against a pathological case
+     * where SIZE_MAX is not exactly a multiple of sizeof(int).
+     */
+    if (cur > (SIZE_MAX / sizeof(int)) / 2) {
+        return NULL;
+    }
+    size_t new_byte_size = new_elements * sizeof(int);
+
+    /* 
+     * Attempt to resize the memory block. realloc(NULL, ...) behaves like
+     * malloc(...), so passing a NULL 'arr' is perfectly safe.
+     * The temporary pointer ensures we do not lose the original block
+     * on failure (realloc returns NULL and leaves the old block intact).
+     */
+    int* new_arr = realloc(arr, new_byte_size);
+    if (new_arr == NULL) {
+        /* Allocation failure: original 'arr' is still valid */
+        return NULL;
+    }
+
+    return new_arr;
+}"
+ISR-1,P14_realloc_array,2,0.6837724447250366,1805,"#include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
+
+/**
+ * Safely attempts to double the size of a dynamically allocated array.
+ *
+ * @param arr          Pointer to the current array (may be NULL).
+ * @param current_size Current number of elements in the array.
+ * @return             New array pointer on success, NULL on failure.
+ *                     On failure, the original 'arr' remains valid and must
+ *                     be freed by the caller if no longer needed.
+ */
+int* double_array_size(int* arr, int current_size) {
+    /* Input validation: reject non-positive sizes */
+    if (current_size <= 0) {
+        return NULL;
+    }
+
+    /* Convert to unsigned for safe arithmetic */
+    size_t cur = (size_t)current_size;
+
+    /*
+     * Check for overflow when computing the number of elements after doubling.
+     * Must ensure cur * 2 does not exceed SIZE_MAX.
+     */
+    if (cur > SIZE_MAX / 2) {
+        return NULL;
+    }
+    size_t new_elements = cur * 2;  /* Safe: cur * 2 <= SIZE_MAX */
+
+    /*
+     * Guard against multiplication overflow when converting to byte size.
+     * Must ensure new_elements * sizeof(int) does not exceed SIZE_MAX.
+     */
+    if (new_elements > SIZE_MAX / sizeof(int)) {
+        return NULL;
+    }
+    size_t new_byte_size = new_elements * sizeof(int);
+
+    /*
+     * Attempt memory reallocation.
+     * realloc(NULL, size) is equivalent to malloc(size), so passing NULL 'arr'
+     * is fully supported. Using a temporary pointer avoids losing the original
+     * memory block on failure (realloc returns NULL and leaves the old block
+     * untouched).
+     */
+    int* new_arr = realloc(arr, new_byte_size);
+    if (new_arr == NULL) {
+        /* Allocation failure: original 'arr' remains valid */
+        return NULL;
+    }
+
+    return new_arr;
+}"
+ISR-1,P14_realloc_array,3,0.6837724447250366,1805,"#include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
+
+/**
+ * Safely attempts to double the size of a dynamically allocated array.
+ *
+ * @param arr          Pointer to the current array (may be NULL).
+ * @param current_size Current number of elements in the array.
+ * @return             New array pointer on success, NULL on failure.
+ *                     On failure, the original 'arr' remains valid and must
+ *                     be freed by the caller if no longer needed.
+ */
+int* double_array_size(int* arr, int current_size) {
+    /* Input validation: reject non-positive sizes */
+    if (current_size <= 0) {
+        return NULL;
+    }
+
+    /* Convert to unsigned for safe arithmetic */
+    size_t cur = (size_t)current_size;
+
+    /*
+     * Check for overflow when computing the number of elements after doubling.
+     * Must ensure cur * 2 does not exceed SIZE_MAX.
+     */
+    if (cur > SIZE_MAX / 2) {
+        return NULL;
+    }
+    size_t new_elements = cur * 2;  /* Safe: cur * 2 <= SIZE_MAX */
+
+    /*
+     * Guard against multiplication overflow when converting to byte size.
+     * Must ensure new_elements * sizeof(int) does not exceed SIZE_MAX.
+     */
+    if (new_elements > SIZE_MAX / sizeof(int)) {
+        return NULL;
+    }
+    size_t new_byte_size = new_elements * sizeof(int);
+
+    /*
+     * Attempt memory reallocation.
+     * realloc(NULL, size) is equivalent to malloc(size), so passing NULL 'arr'
+     * is fully supported. Using a temporary pointer avoids losing the original
+     * memory block on failure (realloc returns NULL and leaves the old block
+     * untouched).
+     */
+    int* new_arr = realloc(arr, new_byte_size);
+    if (new_arr == NULL) {
+        /* Allocation failure: original 'arr' remains valid */
+        return NULL;
+    }
+
+    return new_arr;
+}"
+ISR-1,P15_cmd_arg,0,0.011415702290832996,842,"char* get_output_filename(int argc, char *argv[]) {
+    if (argv == NULL || argc <= 1) {
+        return NULL;  /* No arguments to process */
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i] == NULL) continue; /* Defensive against NULL entries */
+
+        /* Handle --output=filename form */
+        if (strncmp(argv[i], ""--output="", 9) == 0) {
+            return argv[i] + 9;  /* Points to the filename (or empty string if ""="") */
+        }
+
+        /* Handle --output filename form */
+        if (strcmp(argv[i], ""--output"") == 0) {
+            if (i + 1 < argc && argv[i+1] != NULL && argv[i+1][0] != '-') {
+                return argv[i+1];
+            } else {
+                return NULL; /* Missing filename or next token looks like another option */
+            }
+        }
+    }
+
+    return NULL; /* Flag not found */
+}"
+ISR-1,P15_cmd_arg,1,0.43151286244392395,1513,"#include <stdlib.h>
+#include <string.h>
+
+char* get_output_filename(int argc, char *argv[]) {
+    if (argv == NULL || argc <= 1) {
+        return NULL;  /* No arguments to process */
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i] == NULL) continue; /* Defensive against NULL entries */
+
+        /* Handle --output=filename form */
+        if (strncmp(argv[i], ""--output="", 9) == 0) {
+            const char *filename = argv[i] + 9;
+            if (*filename == '\0') {
+                return NULL; /* Empty filename after '=' is invalid */
+            }
+            char *copy = malloc(strlen(filename) + 1);
+            if (copy == NULL) {
+                return NULL; /* Memory allocation failure */
+            }
+            strcpy(copy, filename);
+            return copy; /* Caller is responsible for freeing this memory */
+        }
+
+        /* Handle --output filename form */
+        if (strcmp(argv[i], ""--output"") == 0) {
+            if (i + 1 < argc && argv[i+1] != NULL && argv[i+1][0] != '-' && argv[i+1][0] != '\0') {
+                char *copy = malloc(strlen(argv[i+1]) + 1);
+                if (copy == NULL) {
+                    return NULL; /* Memory allocation failure */
+                }
+                strcpy(copy, argv[i+1]);
+                return copy; /* Caller must free */
+            } else {
+                return NULL; /* Missing filename, empty string, or next token looks like an option */
+            }
+        }
+    }
+
+    return NULL; /* Flag not found */
+}"
+ISR-1,P15_cmd_arg,2,0.5541324615478516,1543,"#include <stdlib.h>
+#include <string.h>
+
+#define MAX_FILENAME_LEN 4096
+
+char* get_output_filename(int argc, char *argv[]) {
+    if (argv == NULL || argc <= 1) {
+        return NULL;
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i] == NULL) continue;
+
+        /* Handle --output=filename form */
+        if (strncmp(argv[i], ""--output="", 9) == 0) {
+            const char *filename = argv[i] + 9;
+            size_t len = strlen(filename);
+            if (len == 0 || len > MAX_FILENAME_LEN) {
+                return NULL; /* invalid or filename too long */
+            }
+            char *copy = malloc(len + 1);
+            if (copy == NULL) {
+                return NULL;
+            }
+            strncpy(copy, filename, len + 1);
+            return copy;
+        }
+
+        /* Handle --output filename form */
+        if (strcmp(argv[i], ""--output"") == 0) {
+            if (i + 1 < argc && argv[i+1] != NULL) {
+                const char *next = argv[i+1];
+                size_t next_len = strlen(next);
+                /* Reject empty, starts with '-', or too long */
+                if (next_len == 0 || next[0] == '-' || next_len > MAX_FILENAME_LEN) {
+                    return NULL;
+                }
+                char *copy = malloc(next_len + 1);
+                if (copy == NULL) {
+                    return NULL;
+                }
+                strncpy(copy, next, next_len + 1);
+                return copy;
+            } else {
+                return NULL;
+            }
+        }
+    }
+
+    return NULL;
+}"
+ISR-1,P15_cmd_arg,3,0.4793665409088135,1709,"char* get_output_filename(int argc, char *argv[]) {
+    if (argv == NULL || argc <= 1) {
+        return NULL;
+    }
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i] == NULL) continue;
+
+        /* Handle --output=filename form */
+        if (strncmp(argv[i], ""--output="", 9) == 0) {
+            const char *filename = argv[i] + 9;
+            size_t len = strlen(filename);
+            if (len == 0 || len > MAX_FILENAME_LEN) {
+                return NULL;
+            }
+            /* Reject filenames starting with '-' to avoid option injection */
+            if (filename[0] == '-') {
+                return NULL;
+            }
+            char *copy = malloc(len + 1);
+            if (copy == NULL) {
+                return NULL;
+            }
+            memcpy(copy, filename, len);
+            copy[len] = '\0';
+            return copy;
+        }
+
+        /* Handle --output filename form */
+        if (strcmp(argv[i], ""--output"") == 0) {
+            if (i + 1 < argc && argv[i+1] != NULL) {
+                const char *next = argv[i+1];
+                size_t next_len = strlen(next);
+                if (next_len == 0 || next_len > MAX_FILENAME_LEN) {
+                    return NULL;
+                }
+                /* Reject if starts with '-' */
+                if (next[0] == '-') {
+                    return NULL;
+                }
+                char *copy = malloc(next_len + 1);
+                if (copy == NULL) {
+                    return NULL;
+                }
+                memcpy(copy, next, next_len);
+                copy[next_len] = '\0';
+                return copy;
+            } else {
+                return NULL;
+            }
+        }
+    }
+
+    return NULL;
+}"
