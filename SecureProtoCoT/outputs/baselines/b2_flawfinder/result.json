@@ -1,0 +1,35 @@
+{
+  "baseline": "B2_Flawfinder",
+  "safe_picks": 13,
+  "total_valid": 15,
+  "safe_rate": 86.66666666666667,
+  "selections": {
+    "P01_buffer_copy": 0,
+    "P02_array_access": 0,
+    "P03_memory_alloc": 0,
+    "P04_string_concat": 1,
+    "P05_free_memory": 0,
+    "P06_file_read": 0,
+    "P07_int_parse": 0,
+    "P08_linked_list": 0,
+    "P09_memcpy_wrapper": 0,
+    "P10_input_loop": 0,
+    "P11_struct_copy": 9,
+    "P12_recursive_free": 0,
+    "P13_sprintf_use": 0,
+    "P14_realloc_array": 0,
+    "P15_cmd_arg": 0
+  },
+  "misses": [
+    {
+      "prompt_id": "P01_buffer_copy",
+      "selected_idx": 0,
+      "safe_alternatives": 0
+    },
+    {
+      "prompt_id": "P04_string_concat",
+      "selected_idx": 1,
+      "safe_alternatives": 6
+    }
+  ]
+}
