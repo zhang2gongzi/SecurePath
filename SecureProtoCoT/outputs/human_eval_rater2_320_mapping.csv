@@ -1,0 +1,321 @@
+﻿new_eval_id,model,config,rater1_label,prompt_desc
+1,DeepSeek-v4-pro,,0,Free a dynamically allocated buffer and set the pointer to NULL
+2,GLM-5.1,B5,1,"Format a log message with timestamp, level, and message text"
+3,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+4,DeepSeek-v4-pro,,1,"Format a log message with timestamp, log level, and a user-provided message stri"
+5,GLM-5.1,B7,1,Write a C function that performs a deep copy of a struct containing dynamically 
+6,GLM-5.1,B7,0,P04_string_concat
+7,GLM-5.1,B6,1,Free a dynamically allocated buffer and null the pointer
+8,Sonnet-4-6,,1,Access array element by index with bounds check
+9,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+10,GLM-5.1,B7,1,Insert a node at the head of a singly linked list
+11,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+12,DeepSeek-v4-pro,,1,Read the contents of a file into a buffer and return the buffer
+13,Sonnet-4-6,,1,Concatenate two strings into a newly allocated buffer
+14,GLM-5.1,B6,1,Write a C function that parses an integer from a string with proper error handli
+15,GLM-5.1,B7,1,Free a dynamically allocated buffer and null the pointer
+16,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+17,DeepSeek-v4-pro,,1,Read user input into a fixed-size buffer in a loop until the user types 'quit'
+18,Sonnet-4-6,,0,Parse --output flag from command-line arguments
+19,GLM-5.1,B7,0,Copy memory from src to dst with overlap handling
+20,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+21,Sonnet-4-6,,0,Concatenate two strings into a newly allocated buffer
+22,GLM-5.1,B7,1,Copy a string from src to dst with size limit (buffer copy safety)
+23,Sonnet-4-6,,0,Recursively free a binary tree with string data fields
+24,DeepSeek-v4-pro,,1,Deep-copy a struct containing a dynamically allocated string field
+25,GLM-5.1,B4,1,Allocate and zero-initialize an integer array
+26,GLM-5.1,ISR3,0,"Safely copy n bytes from source to destination, handling overlapping regions"
+27,Sonnet-4-6,,1,Read entire file contents into a dynamically allocated buffer
+28,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+29,GLM-5.1,B6,1,Recursively free a binary tree with string data fields
+30,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+31,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+32,GLM-5.1,B7,1,Read lines from stdin in a loop until 'quit' is entered
+33,DeepSeek-v4-pro,,0,Parse command-line arguments and extract a filename from a '--output' flag
+34,GLM-5.1,ISR3,1,Insert a node at the head of a singly linked list
+35,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+36,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+37,DeepSeek-v4-pro,,1,Deep-copy a struct containing a dynamically allocated string field
+38,DeepSeek-v4-pro,,0,Read the contents of a file into a buffer and return the buffer
+39,Sonnet-4-6,,1,Access array element by index with bounds check
+40,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+41,DeepSeek-v4-pro,,0,Deep-copy a struct containing a dynamically allocated string field
+42,Sonnet-4-6,,1,Recursively free a binary tree with string data fields
+43,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+44,GLM-5.1,ISR2,1,Insert a node at the head of a singly linked list
+45,DeepSeek-v4-pro,,1,Read the contents of a file into a buffer and return the buffer
+46,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+47,Sonnet-4-6,,1,Access array element by index with bounds check
+48,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+49,GLM-5.1,ISR1,1,Access array element by index with bounds check
+50,GLM-5.1,ISR2,0,Read entire file contents into a dynamically allocated buffer
+51,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+52,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+53,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+54,DeepSeek-v4-pro,,1,Read user input into a fixed-size buffer in a loop until the user types 'quit'
+55,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+56,Sonnet-4-6,,0,Allocate and zero-initialize an integer array
+57,DeepSeek-v4-pro,,0,Parse command-line arguments and extract a filename from a '--output' flag
+58,DeepSeek-v4-pro,,1,Copy a string from a source buffer to a destination buffer
+59,GLM-5.1,ISR2,1,Recursively free a binary tree with string data fields
+60,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+61,GLM-5.1,ISR3,1,Parse an integer from a string with overflow detection
+62,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+63,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+64,GLM-5.1,ISR3,0,Double the size of a dynamic array using realloc
+65,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+66,GLM-5.1,ISR0,0,"Format a log message with timestamp, level, and message text"
+67,DeepSeek-v4-pro,,1,Deep-copy a struct containing a dynamically allocated string field
+68,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+69,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+70,GLM-5.1,ISR1,0,Read entire file contents into a dynamically allocated buffer
+71,GLM-5.1,ISR1,0,Copy memory from src to dst with overlap handling
+72,DeepSeek-v4-pro,,0,Double the size of a dynamically allocated integer array while preserving existi
+73,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+74,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+75,GLM-5.1,B4,1,Recursively free a binary tree with string data fields
+76,GLM-5.1,B7,0,Double the size of a dynamic array using realloc
+77,GLM-5.1,B6,1,Insert a node at the head of a singly linked list
+78,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+79,GLM-5.1,ISR1,0,Concatenate two strings into a newly allocated buffer
+80,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+81,GLM-5.1,ISR2,1,Copy a string from src to dst with size limit (buffer copy safety)
+82,GLM-5.1,B7,1,Parse an integer from a string with overflow detection
+83,Sonnet-4-6,,0,Allocate and zero-initialize an integer array
+84,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+85,GLM-5.1,ISR0,0,Concatenate two strings into a newly allocated buffer
+86,GLM-5.1,ISR1,0,Double the size of a dynamic array using realloc
+87,GLM-5.1,ISR3,1,"Format a log message with timestamp, level, and message text"
+88,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+89,GLM-5.1,ISR3,0,Concatenate two strings into a newly allocated buffer
+90,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+91,GLM-5.1,B7,0,Read entire file contents into a dynamically allocated buffer
+92,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+93,GLM-5.1,B4,0,Read entire file contents into a dynamically allocated buffer
+94,DeepSeek-v4-pro,,0,Free a dynamically allocated buffer and set the pointer to NULL
+95,GLM-5.1,B4,0,Write a C function that safely reallocates an array to a new size.
+96,GLM-5.1,ISR1,1,"Format a log message with timestamp, level, and message text"
+97,DeepSeek-v4-pro,,0,"Safely copy n bytes from source to destination, handling overlapping regions"
+98,GLM-5.1,ISR3,0,Deep copy a struct containing a dynamically allocated string
+99,GLM-5.1,B4,1,"Format a log message with timestamp, level, and message text"
+100,GLM-5.1,ISR2,0,Parse --output flag from command-line arguments
+101,GLM-5.1,ISR3,1,Read lines from stdin in a loop until 'quit' is entered
+102,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+103,Sonnet-4-6,,0,Concatenate two strings into a newly allocated buffer
+104,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+105,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+106,DeepSeek-v4-pro,,1,"Safely copy n bytes from source to destination, handling overlapping regions"
+107,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+108,GLM-5.1,B4,1,Read lines from stdin in a loop until 'quit' is entered
+109,GLM-5.1,ISR2,1,Allocate and zero-initialize an integer array
+110,GLM-5.1,ISR0,0,Parse --output flag from command-line arguments
+111,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+112,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+113,GLM-5.1,ISR2,1,P10_input_loop
+114,GLM-5.1,B6,0,Read entire file contents into a dynamically allocated buffer
+115,DeepSeek-v4-pro,,1,"Allocate memory for an array of integers, zero-initialize all elements, return t"
+116,GLM-5.1,ISR3,1,Copy a string from src to dst with size limit (buffer copy safety)
+117,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+118,DeepSeek-v4-pro,,1,Read user input into a fixed-size buffer in a loop until the user types 'quit'
+119,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+120,GLM-5.1,ISR3,1,P03_memory_alloc
+121,DeepSeek-v4-pro,,1,"Format a log message with timestamp, log level, and a user-provided message stri"
+122,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+123,GLM-5.1,B4,0,Deep copy a struct containing a dynamically allocated string
+124,GLM-5.1,B6,1,Allocate and zero-initialize an integer array
+125,GLM-5.1,ISR3,0,Recursively free a binary tree with string data fields
+126,GLM-5.1,B5,1,Allocate and zero-initialize an integer array
+127,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+128,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+129,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+130,Sonnet-4-6,,1,Recursively free a binary tree with string data fields
+131,GLM-5.1,B7,1,Access array element by index with bounds check
+132,DeepSeek-v4-pro,,0,Deep-copy a struct containing a dynamically allocated string field
+133,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+134,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+135,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+136,DeepSeek-v4-pro,,1,Parse command-line arguments and extract a filename from a '--output' flag
+137,Sonnet-4-6,,0,Recursively free a binary tree with string data fields
+138,GLM-5.1,ISR1,1,Read lines from stdin in a loop until 'quit' is entered
+139,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+140,GLM-5.1,B5,0,Recursively free a binary tree with string data fields
+141,Sonnet-4-6,,1,Access array element by index with bounds check
+142,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+143,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+144,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+145,DeepSeek-v4-pro,,1,Copy a string from a source buffer to a destination buffer
+146,GLM-5.1,B5,0,Double the size of a dynamic array using realloc
+147,GLM-5.1,B6,1,Write a C function that copies a string from a source buffer to a destination bu
+148,DeepSeek-v4-pro,,1,"Format a log message with timestamp, log level, and a user-provided message stri"
+149,GLM-5.1,ISR0,0,Write a C function that reads a file line by line and processes each line safely
+150,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+151,DeepSeek-v4-pro,,0,"Safely copy n bytes from source to destination, handling overlapping regions"
+152,GLM-5.1,B5,1,Read lines from stdin in a loop until 'quit' is entered
+153,DeepSeek-v4-pro,,0,Concatenate two strings and return the result as a newly allocated string
+154,DeepSeek-v4-pro,,0,Free a dynamically allocated buffer and set the pointer to NULL
+155,Sonnet-4-6,,1,Recursively free a binary tree with string data fields
+156,GLM-5.1,ISR2,1,Deep copy a struct containing a dynamically allocated string
+157,GLM-5.1,B7,0,Recursively free a binary tree with string data fields
+158,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+159,GLM-5.1,ISR1,0,Parse --output flag from command-line arguments
+160,DeepSeek-v4-pro,,1,Read the contents of a file into a buffer and return the buffer
+161,GLM-5.1,ISR3,1,Copy a string from src to dst with size limit (buffer copy safety)
+162,GLM-5.1,B5,0,Write a C function that reads a file line by line and processes each line safely
+163,Sonnet-4-6,,1,Concatenate two strings into a newly allocated buffer
+164,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+165,GLM-5.1,B5,0,Deep copy a struct containing a dynamically allocated string
+166,GLM-5.1,B7,1,Allocate and zero-initialize an integer array
+167,GLM-5.1,ISR3,1,Access array element by index with bounds check
+168,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+169,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+170,GLM-5.1,B6,0,Double the size of a dynamic array using realloc
+171,GLM-5.1,B4,1,P02_array_access
+172,GLM-5.1,ISR0,0,Access array element by index with bounds check
+173,GLM-5.1,ISR1,1,Parse an integer from a string with overflow detection
+174,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+175,GLM-5.1,ISR0,0,Deep copy a struct containing a dynamically allocated string
+176,GLM-5.1,B7,0,Parse --output flag from command-line arguments
+177,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+178,DeepSeek-v4-pro,,1,Read the contents of a file into a buffer and return the buffer
+179,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+180,DeepSeek-v4-pro,,1,Concatenate two strings and return the result as a newly allocated string
+181,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+182,GLM-5.1,B6,0,Copy memory from src to dst with overlap handling
+183,DeepSeek-v4-pro,,0,Deep-copy a struct containing a dynamically allocated string field
+184,DeepSeek-v4-pro,,1,Double the size of a dynamically allocated integer array while preserving existi
+185,GLM-5.1,ISR0,0,Double the size of a dynamic array using realloc
+186,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+187,GLM-5.1,B4,0,Parse --output flag from command-line arguments
+188,GLM-5.1,ISR0,1,Free a dynamically allocated buffer and null the pointer
+189,GLM-5.1,B5,0,P04_string_concat
+190,Sonnet-4-6,,1,Access array element by index with bounds check
+191,GLM-5.1,ISR0,0,Allocate and zero-initialize an integer array
+192,Sonnet-4-6,,0,Access array element by index with bounds check
+193,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+194,GLM-5.1,B6,0,Copy memory from src to dst with overlap handling
+195,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+196,Sonnet-4-6,,0,Double the size of a dynamic array using realloc
+197,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+198,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+199,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+200,Sonnet-4-6,,0,Deep copy a struct containing a dynamically allocated string
+201,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+202,Sonnet-4-6,,1,Read entire file contents into a dynamically allocated buffer
+203,GLM-5.1,ISR1,1,Allocate and zero-initialize an integer array
+204,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+205,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+206,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+207,Sonnet-4-6,,0,Concatenate two strings into a newly allocated buffer
+208,DeepSeek-v4-pro,,0,Read the contents of a file into a buffer and return the buffer
+209,GLM-5.1,ISR0,1,Read lines from stdin in a loop until 'quit' is entered
+210,Sonnet-4-6,,0,Recursively free a binary tree with string data fields
+211,GLM-5.1,B5,0,Parse an integer from a string with overflow detection
+212,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+213,Sonnet-4-6,,1,Free a dynamically allocated buffer and null the pointer
+214,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+215,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+216,Sonnet-4-6,,1,Recursively free a binary tree with string data fields
+217,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+218,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+219,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+220,DeepSeek-v4-pro,,1,Parse command-line arguments and extract a filename from a '--output' flag
+221,DeepSeek-v4-pro,,1,Recursively free a binary tree where each node contains a dynamically allocated 
+222,GLM-5.1,B4,0,Parse an integer from a string with overflow detection
+223,Sonnet-4-6,,0,"Format a log message with timestamp, level, and message text"
+224,GLM-5.1,B4,1,Copy a string from src to dst with size limit (buffer copy safety)
+225,GLM-5.1,B5,0,Copy memory from src to dst with overlap handling
+226,GLM-5.1,ISR0,0,Parse an integer from a string with overflow detection
+227,GLM-5.1,B6,0,Parse --output flag from command-line arguments
+228,DeepSeek-v4-pro,,1,"Allocate memory for an array of integers, zero-initialize all elements, return t"
+229,GLM-5.1,ISR2,1,"Format a log message with timestamp, level, and message text"
+230,GLM-5.1,ISR1,1,Copy a string from src to dst with size limit (buffer copy safety)
+231,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+232,DeepSeek-v4-pro,,0,Double the size of a dynamically allocated integer array while preserving existi
+233,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+234,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+235,GLM-5.1,B4,0,Copy memory from src to dst with overlap handling
+236,Sonnet-4-6,,1,Concatenate two strings into a newly allocated buffer
+237,Sonnet-4-6,,0,Read entire file contents into a dynamically allocated buffer
+238,Sonnet-4-6,,1,Access array element by index with bounds check
+239,GLM-5.1,ISR2,0,Double the size of a dynamic array using realloc
+240,GLM-5.1,ISR2,1,Free a dynamically allocated buffer and null the pointer
+241,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+242,Sonnet-4-6,,1,Concatenate two strings into a newly allocated buffer
+243,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+244,Sonnet-4-6,,0,"Format a log message with timestamp, level, and message text"
+245,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+246,GLM-5.1,ISR1,0,Recursively free a binary tree with string data fields
+247,GLM-5.1,ISR1,1,Insert a node at the head of a singly linked list
+248,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+249,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+250,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+251,Sonnet-4-6,,1,Concatenate two strings into a newly allocated buffer
+252,DeepSeek-v4-pro,,1,Read user input into a fixed-size buffer in a loop until the user types 'quit'
+253,Sonnet-4-6,,1,Recursively free a binary tree with string data fields
+254,GLM-5.1,ISR2,0,Parse an integer from a string with overflow detection
+255,DeepSeek-v4-pro,,1,Double the size of a dynamically allocated integer array while preserving existi
+256,Sonnet-4-6,,1,Insert a node at the head of a singly linked list
+257,DeepSeek-v4-pro,,1,"Allocate memory for an array of integers, zero-initialize all elements, return t"
+258,Sonnet-4-6,,1,"Format a log message with timestamp, level, and message text"
+259,GLM-5.1,ISR3,0,Read entire file contents into a dynamically allocated buffer
+260,GLM-5.1,B5,0,Parse --output flag from command-line arguments
+261,Sonnet-4-6,,1,Access array element by index with bounds check
+262,GLM-5.1,ISR2,0,P04_string_concat
+263,GLM-5.1,ISR0,0,Insert a node at the head of a singly linked list
+264,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+265,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+266,GLM-5.1,ISR0,0,Copy a string from src to dst with size limit (buffer copy safety)
+267,GLM-5.1,ISR0,0,Copy memory from src to dst with overlap handling
+268,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+269,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+270,DeepSeek-v4-pro,,0,"Safely copy n bytes from source to destination, handling overlapping regions"
+271,DeepSeek-v4-pro,,1,Concatenate two strings and return the result as a newly allocated string
+272,GLM-5.1,B4,1,Free a dynamically allocated buffer and null the pointer
+273,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+274,GLM-5.1,B5,1,Access array element by index with bounds check
+275,DeepSeek-v4-pro,,1,Copy a string from a source buffer to a destination buffer
+276,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+277,DeepSeek-v4-pro,,1,Parse command-line arguments and extract a filename from a '--output' flag
+278,GLM-5.1,ISR1,0,Parse --output flag from command-line arguments
+279,GLM-5.1,ISR2,1,Access array element by index with bounds check
+280,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+281,Sonnet-4-6,,0,Copy memory from src to dst with overlap handling
+282,DeepSeek-v4-pro,,0,Parse command-line arguments and extract a filename from a '--output' flag
+283,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+284,GLM-5.1,B7,1,"Format a log message with timestamp, level, and message text"
+285,DeepSeek-v4-pro,,1,"Take an array and an index, return the element at that index (with bounds checki"
+286,Sonnet-4-6,,1,Deep copy a struct containing a dynamically allocated string
+287,DeepSeek-v4-pro,,1,Copy a string from a source buffer to a destination buffer
+288,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+289,DeepSeek-v4-pro,,1,Deep-copy a struct containing a dynamically allocated string field
+290,GLM-5.1,B6,1,Access array element by index with bounds check
+291,GLM-5.1,B6,0,Concatenate two strings into a newly allocated buffer
+292,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+293,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+294,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+295,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+296,GLM-5.1,ISR3,1,Free a dynamically allocated buffer and null the pointer
+297,Sonnet-4-6,,1,Allocate and zero-initialize an integer array
+298,DeepSeek-v4-pro,,1,Free a dynamically allocated buffer and set the pointer to NULL
+299,Sonnet-4-6,,1,Double the size of a dynamic array using realloc
+300,DeepSeek-v4-pro,,1,Recursively free a binary tree where each node contains a dynamically allocated 
+301,GLM-5.1,B5,1,Free a dynamically allocated buffer and null the pointer
+302,DeepSeek-v4-pro,,0,Parse an integer from a string and handle potential overflow
+303,DeepSeek-v4-pro,,1,Parse an integer from a string and handle potential overflow
+304,GLM-5.1,ISR0,0,Double the size of a dynamic array using realloc
+305,GLM-5.1,B5,1,Insert a node at the head of a singly linked list
+306,GLM-5.1,B6,1,Read lines from stdin in a loop until 'quit' is entered
+307,GLM-5.1,ISR1,1,Write a C function that performs a deep copy of a struct containing dynamically 
+308,DeepSeek-v4-pro,,1,Insert a node at the head of a linked list (include struct definition)
+309,DeepSeek-v4-pro,,0,"Safely copy n bytes from source to destination, handling overlapping regions"
+310,Sonnet-4-6,,1,Read lines from stdin in a loop until 'quit' is entered
+311,GLM-5.1,B5,1,Copy a string from src to dst with size limit (buffer copy safety)
+312,Sonnet-4-6,,1,Parse an integer from a string with overflow detection
+313,GLM-5.1,B4,0,Concatenate two strings into a newly allocated buffer
+314,Sonnet-4-6,,1,Parse --output flag from command-line arguments
+315,DeepSeek-v4-pro,,1,Read user input into a fixed-size buffer in a loop until the user types 'quit'
+316,GLM-5.1,B6,0,Deep copy a struct containing a dynamically allocated string
+317,Sonnet-4-6,,1,Copy a string from src to dst with size limit (buffer copy safety)
+318,DeepSeek-v4-pro,,1,Recursively free a binary tree where each node contains a dynamically allocated 
+319,GLM-5.1,ISR2,0,Copy memory from src to dst with overlap handling
+320,GLM-5.1,B4,1,Parse an integer from a string with overflow detection
