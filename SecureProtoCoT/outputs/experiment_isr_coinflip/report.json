@@ -1,0 +1,277 @@
+{
+  "config": {},
+  "random_seed": 42,
+  "num_prompts": 15,
+  "num_runs": 3,
+  "total_samples": 45,
+  "total_iterations": 130,
+  "model": "wangsu-anthropic-glm-latest",
+  "summary": {
+    "avg_iterations": 2.888888888888889,
+    "median_iterations": 3.0,
+    "iter_distribution": {
+      "1": 10,
+      "2": 11,
+      "3": 7,
+      "4": 8,
+      "5": 9
+    }
+  },
+  "per_prompt": [
+    {
+      "prompt_id": "P01_buffer_copy",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 3
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 2
+        }
+      ]
+    },
+    {
+      "prompt_id": "P02_array_access",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 5
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 5
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 4
+        }
+      ]
+    },
+    {
+      "prompt_id": "P03_memory_alloc",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 4
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 4
+        }
+      ]
+    },
+    {
+      "prompt_id": "P04_string_concat",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 2
+        }
+      ]
+    },
+    {
+      "prompt_id": "P05_free_memory",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 3
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 2
+        }
+      ]
+    },
+    {
+      "prompt_id": "P06_file_read",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 5
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 5
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 5
+        }
+      ]
+    },
+    {
+      "prompt_id": "P07_int_parse",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 3
+        }
+      ]
+    },
+    {
+      "prompt_id": "P08_linked_list",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 3
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 4
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 1
+        }
+      ]
+    },
+    {
+      "prompt_id": "P09_memcpy_wrapper",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 5
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 1
+        }
+      ]
+    },
+    {
+      "prompt_id": "P10_input_loop",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 4
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 5
+        }
+      ]
+    },
+    {
+      "prompt_id": "P11_struct_copy",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 3
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 3
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 5
+        }
+      ]
+    },
+    {
+      "prompt_id": "P12_recursive_free",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 4
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 2
+        }
+      ]
+    },
+    {
+      "prompt_id": "P13_sprintf_use",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 5
+        }
+      ]
+    },
+    {
+      "prompt_id": "P14_realloc_array",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 4
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 4
+        }
+      ]
+    },
+    {
+      "prompt_id": "P15_cmd_arg",
+      "runs": [
+        {
+          "run_id": 0,
+          "num_iterations": 1
+        },
+        {
+          "run_id": 1,
+          "num_iterations": 2
+        },
+        {
+          "run_id": 2,
+          "num_iterations": 3
+        }
+      ]
+    }
+  ]
+}
